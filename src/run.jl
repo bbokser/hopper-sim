@@ -23,6 +23,7 @@ q0 = 30*pi/180;
 q1 = 120*(pi/180)
 q2 = 150*(pi/180)
 q3 = -120*(pi/180)
+qe_target = [q0; q1; q2; q3]
 
 Tf = 1
 h = 0.01
@@ -60,8 +61,14 @@ ghist = repeat([0 0 g], N)'
 ghist[:, 1] = [0 0 0]
 ghist[:, 2] = [0 0 0]
 
-const n_c = size(con(q_0))[1]  # number of constraint rows, 24
-const n_q = size(q_0)[1]  # number of q rows, 35
+global const n_c = size(con(q_0))[1]  # number of constraint rows, 24
+global const n_q = size(q_0)[1]  # number of q rows, 35
+
+#Specify the indicies of c (constraint output) that should be non-negative.
+#The rest will be treated as equality constraints.
+#This can vary depending on how you stacked up c above.
+n_eq = 30+5+n_c-1  # number of equality constraints, 58
+nonnegative_constraint_indices = (n_eq+1:n_eq+n_c+1) # update this
 
 #Solve with IPOPT
 n_nlp = n_q + n_c + n_c  # size of decision variables, 83 
@@ -82,19 +89,14 @@ global F_prev = u_f([0 0 0 0 0])
 global k = 0
 
 for kk = 2:(N-1)
-    print("Simulation ", kk/(N-1)*100, " % complete \n")
-    flush(stdout)
-    
-    if kk/(N-1)*100 > 41
-        break
-    end
     
     global k = kk
     
     if k == 1 || k == 2
         global F = u_f([0 0 0 0 0])  # enforce no input for first two timesteps
     else
-        global F = u_f([0 0 0 0 0]*1e-4)
+        global F = u_f([0 0 0 0 0]*1e-5)
+        # global F = qe_control(qe_target, qe_pos, b_orient)
     end
 
     z_guess = [qhist[:,k]; zeros(n_q); ones(n_q)]
@@ -105,15 +107,22 @@ for kk = 2:(N-1)
     
     global F_prev = F
     e = constraint_check(z_sol, 1e-6)
+    print("Simulation ", kk/(N-1)*100, " % complete \n")
+    flush(stdout)
     # print("\n", e, "\n")
-    #=
+    
     if e == true
         print("\n Sim stopped due to ipopt infeasibility \n")
         break
     end
+    #=
+    if kk/(N-1)*100 > 41
+        break
+    end
     =#
-    
     
 end
 
-hopper_vis(qhist)
+while true
+    hopper_vis(qhist)
+end

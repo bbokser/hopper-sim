@@ -128,8 +128,8 @@ function ipopt_solve(x0,prob::MOI.AbstractNLPEvaluator;
     x = MOI.add_variables(solver,prob.n_nlp)
 
     for i = 1:prob.n_nlp
-        # xi = MOI.SingleVariable(x[i])
-        xi = MOI.x[i]
+        xi = MOI.SingleVariable(x[i])
+        # xi = MOI.x[i]
         MOI.add_constraint(solver, xi, MOI.LessThan(x_u[i]))
         MOI.add_constraint(solver, xi, MOI.GreaterThan(x_l[i]))
         MOI.set(solver, MOI.VariablePrimalStart(), x[i], x0[i])

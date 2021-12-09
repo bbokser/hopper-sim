@@ -22,13 +22,13 @@ end
 
 function u_f(u)
     # convert torque input to wrench
+    # u[1] -> joint0
+    # u[2] -> joint1
+    # u[3] -> joint2
+    # u[4] -> joint3
+    # u[5] -> joint4 (parallel constraint)
 
-    # 1 -> joint0
-    # 2 -> joint1
-    # 3 -> joint2
-    # 4 -> joint3
-    # 5 -> joint4 (parallel constraint)
-    #Corresponding F
+    #Corresponding wrench "F" for each link
     Fk = [zeros(4); -u[1]-u[3]; 0; # body
         zeros(4); u[1]-u[2]; 0; # link0
         zeros(4); u[2]+u[5]; 0; # link1
@@ -38,9 +38,10 @@ function u_f(u)
     return Fk
 end
 
+function qe_control(qe_target, qe_pos, b_orient)
+    # qe_target: joint angle target
+    # qe_pos: joint angles
 
-function qcontrol(q_target, q_pos,  b_orient)
-    
     Fk = u_f(u)
 
     return Fk

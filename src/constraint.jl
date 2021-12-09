@@ -28,7 +28,6 @@ function con(q)
     c_[19:20] = [0 1 0 0; 0 0 0 1]*L(Q2)'*Q3
     c_[21:23] = r1 + rotate(Q1, l1 - l_c1) - r3 - rotate(Q3, lc-l_c3)
     c_[24] = rf[3] - 0.025  # subtract radius of foot
-             
     return c_
 end
 
@@ -41,8 +40,7 @@ function del(m, I, r1, r2, r3, Q1, Q2, Q3, grav)
      (2.0/h)*G(Q2)'*L(Q1)*H*I*H'*L(Q1)'*Q2 + (2.0/h)*G(Q2)'*T*R(Q3)'*H*I*H'*L(Q2)'*Q3]
 end
     
-    
-function DEL(q_1,q_2,q_3,λ,F1,F2, grav)
+function DEL(q_1,q_2,q_3,λ,F1,F2,grav)
     
     rb_1 = q_1[1:3]
     Qb_1 = q_1[4:7]
@@ -86,9 +84,9 @@ function DEL(q_1,q_2,q_3,λ,F1,F2, grav)
     return del1 + (h/2.0)*F1 + (h/2.0)*F2 + reshape(h*λ'*Dc(q_2), 30)
 end
 
-function Dq3DEL(q_1,q_2,q_3,λ,F1,F2, grav)
+function Dq3DEL(q_1,q_2,q_3,λ,F1,F2,grav)
     # @show Ḡ(q_3)
-    ForwardDiff.jacobian(dq->DEL(q_1,q_2,dq,λ,F1,F2), q_3)*Ḡ(q_3)
+    ForwardDiff.jacobian(dq->DEL(q_1,q_2,dq,λ,F1,F2,grav), q_3)*Ḡ(q_3)
 end
 
 #Objective and constraint functions for IPOPT
@@ -118,19 +116,13 @@ function constraint!(c,z)
     c4 = norm(qn[18:21])^2 - 1
     c5 = norm(qn[25:28])^2 - 1
     c6 = norm(qn[32:35])^2 - 1
-    
     c7 = con(qn)  # 24x1
+
     c8 = s - Diagonal(λ)*con(qn)  # 24x1
     c .= [c1; c2; c3; c4; c5; c6; c7; c8]
 
     return nothing
 end
-
-#Specify the indicies of c (constraint output) that should be non-negative.
-#The rest will be treated as equality constraints.
-#This can vary depending on how you stacked up c above.
-
-nonnegative_constraint_indices = (58+1:58+25) # update this
 
 function primal_bounds(n)
     #Enforce simple bound constraints on the decision variables (e.g. positivity) here
@@ -157,18 +149,18 @@ function constraint_check(z, n_tol)
     
     c7 = con(qn)  # 24x1
     c8 = s - Diagonal(λ)*con(qn)  # 24x1
-    A = [c1; c2; c3; c4; c5; c6; c7[1:23]]
-    B = [c7[24]; c8]
-    if !isapprox(A, zeros(58); atol=n_tol, rtol=0)
+    A = [c1; c2; c3; c4; c5; c6; c7[1:n_c-1]]  # 23
+    B = [c7[n_c]; c8]  #24
+    if !isapprox(A, zeros(n_eq); atol=n_tol, rtol=0)  # 58
         e = 1
         print("\n", A, "\n")
-        print(findall(A .< -ones(58)*n_tol), " is less than 0 \n")
-        print(findall(A .> ones(58)*n_tol), " is greater than 0 \n")
+        print(findall(A .< -ones(n_eq)*n_tol), " is less than 0 \n")
+        print(findall(A .> ones(n_eq)*n_tol), " is greater than 0 \n")
         
-    elseif B < -ones(25)*n_tol
+    elseif B < -ones(n_c+1)*n_tol  #25
         e = 1
         print("\n", B, "\n")
-        print(findall(B .< -ones(25)*n_tol))
+        print(findall(B .< -ones(n_c+1)*n_tol))  # 25
     else
         e = 0
     end

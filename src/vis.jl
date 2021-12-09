@@ -2,7 +2,7 @@ using MeshCat
 using GeometryBasics
 using CoordinateTransformations
 using Rotations
-using Plots
+import Plots as pl
 
 vis = Visualizer()
 render(vis)
@@ -12,8 +12,8 @@ render(vis)
 delete!(vis)
 
 function hopper_vis(qhist)
-    green_material = MeshPhongMaterial(color=RGBA(0, 1, 0, 0.8))
-    red_material = MeshPhongMaterial(color=RGBA(1, 0, 0, 0.8))
+    green_material = MeshPhongMaterial(color=pl.RGBA(0, 1, 0, 0.8))
+    red_material = MeshPhongMaterial(color=pl.RGBA(1, 0, 0, 0.8))
 
     cylinderb = Cylinder(Point(0, -0.02, l_cb[2]), Point(0, 0.02, l_cb[2]), 0.04)  #float(l_cb)
     cylinder0 = Cylinder(Point(-l_c0[1], -l_c0[2], -l_c0[3]), Point((l0-l_c0)[1], (l0-l_c0)[2], (l0-l_c0)[3]), 0.008)

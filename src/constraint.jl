@@ -1,7 +1,7 @@
 function con(q)
     # joint constraint function
     # c(q_0) should be all zeros
-    c_ = zeros(eltype(q), 24)
+    c_ = zeros(eltype(q), 26)
     
     rb = q[1:3]
     Qb = q[4:7]
@@ -19,15 +19,17 @@ function con(q)
     pb = rb + rotate(Qb, l_cb) # position vector from world frame to *JOINTS* 0 and 2
     
     c_[1:3] = pb - r0 - rotate(Q0, -l_c0)
-    c_[4:5] = [0 1 0 0; 0 0 0 1]*L(Qb)'*Q0  # y axis rotation constraint
+    c_[4:5] = [0 1 0 0; 0 0 0 1]*L(Qb)'*Q0  # y axis rotation constraint: set x & z = 0
     c_[6:8] = r0 + rotate(Q0,  l0-l_c0) - r1 - rotate(Q1, -l_c1)
     c_[9:10] = [0 1 0 0; 0 0 0 1]*L(Q0)'*Q1
     c_[11:13] = pb - r2 - rotate(Q2, -l_c2)
     c_[14:15] = [0 1 0 0; 0 0 0 1]*L(Qb)'*Q2
     c_[16:18] = r2 + rotate(Q2, l2 - l_c2) - r3 - rotate(Q3, -l_c3)
-    c_[19:20] = [0 1 0 0; 0 0 0 1]*L(Q2)'*Q3
+    c_[19:20] = [0 1 0 0; 0 0 0 1]*L(Q2)'*Q3 
     c_[21:23] = r1 + rotate(Q1, l1 - l_c1) - r3 - rotate(Q3, lc-l_c3)
-    c_[24] = rf[3] - 0.025  # subtract radius of foot
+    c_[24] = anglesolve(L(Q0)'*Q1) - 18*pi/180  # constrain relative angle between links 0 and 1
+    c_[25] = 166*pi/180 - anglesolve(L(Q0)'*Q1)
+    c_[26] = rf[3] - 0.025  # subtract radius of foot
     return c_
 end
 
@@ -81,7 +83,7 @@ function DEL(q_1,q_2,q_3,λ,F1,F2,grav)
             del(m2, I2, r2_1, r2_2, r2_3, Q2_1, Q2_2, Q2_3, grav);
             del(m3, I3, r3_1, r3_2, r3_3, Q3_1, Q3_2, Q3_3, grav)] 
 
-    return del1 + (h/2.0)*F1 + (h/2.0)*F2 + reshape(h*λ'*Dc(q_2), 30)
+    return del1 + (h/2.0)*F1 + (h/2.0)*F2 + reshape(h*Dc(q_2)'*λ, 30)
 end
 
 function Dq3DEL(q_1,q_2,q_3,λ,F1,F2,grav)
@@ -94,21 +96,22 @@ end
 function objective(z)
     qn = z[1:n_q]
     λ = z[n_q+1:n_q+n_c]
-    s = z[n_q+1+n_c:n_q+n_c+n_c]
+    s = z[n_q+n_c+1]
     
-    return sum(s) #Minimize slacks associated with complementarity conditions
+    return s # sum(s) #Minimize slacks associated with complementarity conditions
 end
 
 function constraint!(c,z)
     qn = z[1:n_q]
     λ = z[n_q+1:n_q+n_c]
-    s = z[n_q+1+n_c:n_q+n_c+n_c]
+    s = z[n_q+n_c+1]
 
-    # nonlinear DEL equation                (30 equality constraint)
-    # quaternion norm squared - 1 = 0       (5 equality constraints)
+    # nonlinear DEL equation                (30 equality constraint)   c1
+    # quaternion norm squared - 1 = 0       (5 equality constraints)   c2-c6
     # joint constraints                     (23 equality constraints)  c7
+    # relative angle between l0 and l1      (2 inequality constraints)  c7
     # foot height must stay above ground    (1 inequality constraint)  c7
-    # collision constraint                  (24 inequality constraint)
+    # collision constraint                  (1 inequality constraint)  c8
 
     c1 = DEL(qhist[:,k-1], qhist[:,k], qn, λ, F_prev, F, ghist[:, k])  # 30x1
     c2 = norm(qn[4:7])^2 - 1  # 1x1
@@ -116,9 +119,8 @@ function constraint!(c,z)
     c4 = norm(qn[18:21])^2 - 1
     c5 = norm(qn[25:28])^2 - 1
     c6 = norm(qn[32:35])^2 - 1
-    c7 = con(qn)  # 24x1
-
-    c8 = s - Diagonal(λ)*con(qn)  # 24x1
+    c7 = con(qn)  # 25x1
+    c8 = s - λ[26]*con(qn)[26]  # 1x1
     c .= [c1; c2; c3; c4; c5; c6; c7; c8]
 
     return nothing
@@ -128,9 +130,10 @@ function primal_bounds(n)
     #Enforce simple bound constraints on the decision variables (e.g. positivity) here
     # x_l ≤ [q; λ; s] ≤ x_u
 
-    x_l = zeros(n)
+    x_l = zeros(n)  # 60
+    x_l[1:n_q+n_c-1] = -Inf*ones(n_q+n_c-1)  # 35 + 26 - 1
+
     x_u = Inf*ones(n)
-    x_l[1:n_q] = -Inf*ones(n_q)
 
     return x_l, x_u
 end
@@ -138,7 +141,7 @@ end
 function constraint_check(z, n_tol)
     qn = z[1:n_q]
     λ = z[n_q+1:n_q+n_c]
-    s = z[n_q+1+n_c:n_q+n_c+n_c]
+    s = z[n_q+n_c+1]
 
     c1 = DEL(qhist[:,k-1], qhist[:,k], qn, λ, F_prev, F, ghist[:, k])  # 30x1
     c2 = norm(qn[4:7])^2 - 1  # 1x1
@@ -146,21 +149,20 @@ function constraint_check(z, n_tol)
     c4 = norm(qn[18:21])^2 - 1
     c5 = norm(qn[25:28])^2 - 1
     c6 = norm(qn[32:35])^2 - 1
-    
     c7 = con(qn)  # 24x1
-    c8 = s - Diagonal(λ)*con(qn)  # 24x1
-    A = [c1; c2; c3; c4; c5; c6; c7[1:n_c-1]]  # 23
-    B = [c7[n_c]; c8]  #24
+    c8 = s - λ[26]*con(qn)[n_c]  # 1x1
+    A = [c1; c2; c3; c4; c5; c6; c7[1:n_c-3]]  # 23
+    B = [c7[n_c-2:n_c]; c8]  #24-26
     if !isapprox(A, zeros(n_eq); atol=n_tol, rtol=0)  # 58
         e = 1
         print("\n", A, "\n")
         print(findall(A .< -ones(n_eq)*n_tol), " is less than 0 \n")
         print(findall(A .> ones(n_eq)*n_tol), " is greater than 0 \n")
         
-    elseif B < -ones(n_c+1)*n_tol  #25
+    elseif B < -ones(2)*n_tol  #25
         e = 1
         print("\n", B, "\n")
-        print(findall(B .< -ones(n_c+1)*n_tol))  # 25
+        print(findall(B .< -ones(3)*n_tol))  # 25
     else
         e = 0
     end

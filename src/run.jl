@@ -66,13 +66,13 @@ global const n_q = size(q_0)[1]  # number of q rows, 35
 
 #Specify the indicies of c (constraint output) that should be non-negative.
 #The rest will be treated as equality constraints.
-#This can vary depending on how you stacked up c above.
-n_eq = 30+5+n_c-1  # number of equality constraints, 58
-nonnegative_constraint_indices = (n_eq+1:n_eq+n_c+1) # update this
+#This can vary depending on how you stacked up c.
+n_eq = 30+5+n_c-3  # number of equality constraints, 58
+nonnegative_constraint_indices = (n_eq+1:n_eq+4) # update this
 
 #Solve with IPOPT
-n_nlp = n_q + n_c + n_c  # size of decision variables, 83 
-m_nlp = n_q + n_c + n_c  # size of constraint! output, 83 
+n_nlp = n_q + n_c + 1  # size of decision variables
+m_nlp = n_q + n_c + 1  # size of constraint! output
 nlp_prob = ProblemMOI(n_nlp,m_nlp, idx_ineq=nonnegative_constraint_indices);
 
 #Initial conditions
@@ -81,7 +81,7 @@ qhist[:,1] .= q_0
 qhist[:,2] .= q_0  # this may need to be fixed
 
 λhist = zeros(n_c,N-1)
-shist = zeros(n_c,N-1)
+shist = zeros(1,N-1)
 
 global F = u_f([0 0 0 0 0])
 global F_prev = u_f([0 0 0 0 0])
@@ -99,15 +99,15 @@ for kk = 2:(N-1)
         # global F = qe_control(qe_target, qe_pos, b_orient)
     end
 
-    z_guess = [qhist[:,k]; zeros(n_q); ones(n_q)]
+    z_guess = [qhist[:,k]; zeros(n_c); 1]
     z_sol = ipopt_solve(z_guess, nlp_prob, print=0);
     qhist[:,k+1] .= z_sol[1:n_q]
     λhist[:,k] .= z_sol[n_q + 1:n_q + n_c]
-    shist[:,k] .= z_sol[n_q + 1 + n_c:n_q + n_c + n_c]
+    shist[:,k] .= z_sol[n_q + n_c + 1]  # only one slack variable
     
     global F_prev = F
     e = constraint_check(z_sol, 1e-6)
-    print("Simulation ", kk/(N-1)*100, " % complete \n")
+    print("Simulation ", round(kk/(N-1)*100, digits=3), " % complete \n")
     flush(stdout)
     # print("\n", e, "\n")
     
@@ -115,6 +115,7 @@ for kk = 2:(N-1)
         print("\n Sim stopped due to ipopt infeasibility \n")
         break
     end
+    
     #=
     if kk/(N-1)*100 > 41
         break
@@ -123,6 +124,26 @@ for kk = 2:(N-1)
     
 end
 
-while true
+function signed_d()
+    hf = zeros(N)
+    for i in 1:(N-1)
+        r3 = qhist[29:31, i]
+        Q3 = qhist[32:35, i]
+        hf[i] = r3[3] + rotate(Q3, lee-l_c3)[3] # - 0.025 # position of foot
+    end
+    return hf
+end
+
+ph = pl.plot(thist,signed_d(), title="signed dist from foot to ground plane")
+pbz = pl.plot(thist,qhist[3,:], title="height of body")
+plam = pl.plot(λhist[24,:],title="contact force")
+pslack = pl.plot(shist[1, :],title="slackvar")
+
+pl.display(ph)
+pl.display(pbz)
+pl.display(plam)
+pl.display(pslack)
+
+for j in 1:5
     hopper_vis(qhist)
 end

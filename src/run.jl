@@ -134,15 +134,27 @@ function signed_d()
     return hf
 end
 
+function angle_look()
+    an = zeros(N)
+    for i in 1:(N-1)
+        Q0 = qhist[11:14, i]
+        Q1 = qhist[18:21, i]
+        an[i] = pi - anglesolve(L(Q0)'*Q1)
+    end
+    return an
+end
+
 ph = pl.plot(thist,signed_d(), title="signed dist from foot to ground plane")
 pbz = pl.plot(thist,qhist[3,:], title="height of body")
-plam = pl.plot(λhist[24,:],title="contact force")
+plam = pl.plot(λhist[26,:],title="contact force")
 pslack = pl.plot(shist[1, :],title="slackvar")
+pan = pl.plot(thist, angle_look().*180/pi,title="angle b/t 0 and 1")
 
 pl.display(ph)
 pl.display(pbz)
 pl.display(plam)
 pl.display(pslack)
+pl.display(pan)
 
 for j in 1:5
     hopper_vis(qhist)

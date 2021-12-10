@@ -132,8 +132,11 @@ function primal_bounds(n)
 
     x_l = zeros(n)  # 60
     x_l[1:n_q+n_c-1] = -Inf*ones(n_q+n_c-1)  # 35 + 26 - 1
-
+    
     x_u = Inf*ones(n)
+
+    # x_l[24] = 0
+    # x_l[25] = 0
 
     return x_l, x_u
 end

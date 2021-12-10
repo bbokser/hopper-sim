@@ -27,8 +27,8 @@ function con(q)
     c_[16:18] = r2 + rotate(Q2, l2 - l_c2) - r3 - rotate(Q3, -l_c3)
     c_[19:20] = [0 1 0 0; 0 0 0 1]*L(Q2)'*Q3 
     c_[21:23] = r1 + rotate(Q1, l1 - l_c1) - r3 - rotate(Q3, lc-l_c3)
-    c_[24] = anglesolve(L(Q0)'*Q1) - 18*pi/180  # constrain relative angle between links 0 and 1
-    c_[25] = 166*pi/180 - anglesolve(L(Q0)'*Q1)
+    c_[24] = (pi-anglesolve(L(Q0)'*Q1)) - 18*pi/180  # constrain relative angle between links 0 and 1
+    c_[25] = 166*pi/180 - (pi-anglesolve(L(Q0)'*Q1))
     c_[26] = rf[3] - 0.025  # subtract radius of foot
     return c_
 end

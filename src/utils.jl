@@ -52,13 +52,21 @@ function rotate(Q, p)
 end
 
 function anglesolve(Q)
-    # convert quaternion to angle
+    # convert arbitrary quaternion to unsigned angle
     2 * atan(norm(Q[2:4]),Q[1])
 end
-
+#=
 function anglebt(Q1, Q2)
     # get smallest angle b/t quaternions
     acos((Q1'*Q2) / (norm(Q1)*norm(Q2)))
+end
+=#
+
+function angle_y(Q1, Q2)
+    # signed angle about y axis of y-axis-constrained quaternions
+    Q12 = L(Q1)'*Q2
+    Q12 = Q12/(norm(Q12))
+    return 2 * asin(Q12[3])
 end
 
 function a_joint(q)
@@ -70,15 +78,10 @@ function a_joint(q)
     Q2 = q[25:28]
     Q3 = q[32:35]
     
-    Qb0 = L(Qb)'*Q0
-    Q01 = L(Q0)'*Q1
-    Qb2 = L(Qb)'*Q2
-    Q23 = L(Q2)'*Q3
-
-    a0 = -anglesolve(Qb0)
-    a1 = -anglesolve(Q01)
-    a2 = -anglesolve(Qb2)
-    a3 = anglesolve(Q23)
+    a0 = -angle_y(Qb, Q0)
+    a1 = -angle_y(Q0, Q1)
+    a2 = -angle_y(Qb, Q2)
+    a3 = -angle_y(Q2, Q3)
 
     return [a0; a1; a2; a3]
 

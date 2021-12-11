@@ -9,9 +9,10 @@ function geom_init()
     vis = Visualizer()
     render(vis)
     delete!(vis)
+    return vis
 end
 
-function geom_vis(qhist)
+function geom_vis(vis, qhist)
 
     green_material = MeshPhongMaterial(color=pl.RGBA(0, 1, 0, 0.8))
     red_material = MeshPhongMaterial(color=pl.RGBA(1, 0, 0, 0.8))
@@ -77,17 +78,12 @@ function urdf_vis(mvis, qhist)
         Q1 = q[18:21]
         Q2 = q[25:28]
         Q3 = q[32:35]
-        
-        Qb0 = L(Qb)'*Q0
-        Q01 = L(Q0)'*Q1
-        Qb2 = L(Qb)'*Q2
-        Q23 = L(Q2)'*Q3
-    
+           
         # convert quaternions to joint angles
-        a0 = -anglesolve(Qb0) +30*(pi/180)
-        a1 = -anglesolve(Q01) +120*(pi/180)
-        a2 = -anglesolve(Qb2) +150*(pi/180)
-        a3 = anglesolve(Q23) -120*(pi/180)
+        a0 = -angle_y(Qb, Q0) +30*(pi/180)
+        a1 = -angle_y(Q0, Q1) +120*(pi/180)
+        a2 = -angle_y(Qb, Q2) +150*(pi/180)
+        a3 = -angle_y(Q2, Q3) -120*(pi/180)
     
         #-0.5235987755982988, -2.6179938779914944, -2.0943951023931953, 2.0943951023931953
         q_array = vcat(Qb, pb, [a0, a2, a1, a3])

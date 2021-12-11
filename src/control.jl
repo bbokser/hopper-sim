@@ -21,7 +21,7 @@ end
 function a_control(a_target, a_pos, a_vel)
     # a_target: joint angle target
     # a_pos: joint angles
-    kp = 0.075
+    kp = -0.0001
     kd = copy(kp)*0.05
     print("a_pos = ", a_pos.*180/pi, "\n")
     u = kp*(a_pos-a_target) + kd*(a_vel)

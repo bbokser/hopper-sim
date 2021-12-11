@@ -61,18 +61,20 @@ ghist = repeat([0 0 g], N)'
 ghist[:, 1] = [0 0 0]
 ghist[:, 2] = [0 0 0]
 
-global const n_c = size(con(q_0))[1]  # number of constraint rows, 24
-global const n_q = size(q_0)[1]  # number of q rows, 35
-
-#Specify the indicies of c (constraint output) that should be non-negative.
-#The rest will be treated as equality constraints.
-#This can vary depending on how you stacked up c.
-n_eq = 30+5+n_c-3  # number of equality constraints, 58
-nonnegative_constraint_indices = (n_eq+1:n_eq+4) # update this
+global const n_c = size(con(q_0))[1]  # number of constraint function rows corresponding to lagrange multipliers
+global const n_q = size(q_0)[1]  # number of state rows, 35
 
 #Solve with IPOPT
 n_nlp = n_q + n_c + 1  # size of decision variables
 m_nlp = n_q + n_c + 1  # size of constraint! output
+n_s = 1  # number of complementary slackness constraints, MUST UPDATE MANUALLY
+n_c_ineq = 3  # no. of ineq constraints corresponding to lagrange multipliers, MUST UPDATE MANUALLY
+n_ineq = n_c_ineq+n_s  # total number of inequality constraints, MUST UPDATE MANUALLY
+n_eq = 30+5+n_c-n_c_ineq  # number of equality constraints, 58
+#Specify the indicies of c (constraint output) that should be non-negative.
+#The rest will be treated as equality constraints.
+#This can vary depending on how you stacked up c.
+nonnegative_constraint_indices = (n_eq+1:n_eq+n_ineq)
 nlp_prob = ProblemMOI(n_nlp,m_nlp, idx_ineq=nonnegative_constraint_indices);
 
 #Initial conditions
@@ -81,7 +83,7 @@ qhist[:,1] .= q_0
 qhist[:,2] .= q_0  # this may need to be fixed
 
 λhist = zeros(n_c,N-1)
-shist = zeros(1,N-1)
+shist = zeros(n_s,N-1)
 
 global F = u_f([0 0 0 0 0])
 global F_prev = u_f([0 0 0 0 0])
@@ -98,30 +100,29 @@ for kk = 2:(N-1)
     if k == 1 || k == 2  # enforce no input for first two timesteps
         global F = u_f([0 0 0 0 0])  
     else
-        global F = a_control(a_target, a, a_vel(a, a_prev, h))
+        global F = u_f([0 1 0 0 0])*1e-4
+        # global F = a_control(a_target, a, a_vel(a, a_prev, h))
     end
 
-    z_guess = [qhist[:,k]; zeros(n_c); 1]
+    z_guess = [qhist[:,k]; zeros(n_c); n_s]
     z_sol = ipopt_solve(z_guess, nlp_prob, print=0);
     qhist[:,k+1] .= z_sol[1:n_q]
     λhist[:,k] .= z_sol[n_q + 1:n_q + n_c]
-    shist[:,k] .= z_sol[n_q + n_c + 1]  # only one slack variable
+    shist[:,k] .= z_sol[n_q + n_c + 1:n_q + n_c + n_s]
 
     global F_prev = F
 
     e = constraint_check(z_sol, 1e-6)
     print("Simulation ", round(kk/(N-1)*100, digits=3), " % complete \n")
-    flush(stdout)
+    # flush(stdout)
     # print("\n", e, "\n")
-    #=
+    
     if e == true
         print("\n Sim stopped due to ipopt infeasibility \n")
         break
     end
-    =#
-    if kk/(N-1)*100 > 36
-        break
-    end
+    
+    # if kk/(N-1)*100 > 28; break; end
     
 end
 
@@ -145,22 +146,22 @@ function angle_look()
     return an
 end
 
-function anglebt_look()
+function angle_y_look()
     an = zeros(N)
     for i in 1:(N-1)
         Q0 = qhist[11:14, i]
         Q1 = qhist[18:21, i]
-        an[i] = anglebt(Q0, Q1)
+        an[i] = angle_y(Q0, Q1)
     end
     return an
 end
 
 ph = pl.plot(thist,signed_d(), title="signed dist from foot to ground plane")
 pbz = pl.plot(thist,qhist[3,:], title="height of body")
-plam = pl.plot(λhist[26,:],title="contact force")
+plam = pl.plot(λhist[n_c,:],title="contact force")
 pslack = pl.plot(shist[1, :],title="slackvar")
 pan = pl.plot(thist, angle_look().*180/pi,title="angle b/t 0 and 1")
-panbt = pl.plot(thist, anglebt_look().*180/pi,title="anglebt b/t 0 and 1")
+panbt = pl.plot(thist, angle_y_look().*180/pi,title="angle_y b/t 0 and 1")
 
 pl.display(ph)
 pl.display(pbz)
@@ -169,9 +170,22 @@ pl.display(pslack)
 pl.display(pan)
 pl.display(panbt)
 
-mvis = urdf_init()
-sleep(1)
+
+urdf = true  # for now manually change this
+
+if urdf == false
+    anim_init = geom_init
+    anim = geom_vis
+else
+    anim_init = urdf_init
+    anim = urdf_vis
+end
+
+mvis = anim_init()
+print("\n Visualization starting in 5 seconds \n")
+sleep(5)
 for j in 1:5
     print("\n Visualization starting now, replay #", j, "\n")
-    urdf_vis(mvis, qhist)
+    anim(mvis, qhist)
 end
+print("\n Visualization ended \n")

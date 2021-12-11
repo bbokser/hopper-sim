@@ -12,7 +12,7 @@ const FD = ForwardDiff
 include("utils.jl")
 include("constraint.jl")
 include("opt-setup.jl")
-include("leg.jl")
+include("properties.jl")
 include("control.jl")
 include("vis.jl")
 
@@ -23,7 +23,7 @@ q0 = 30*pi/180;
 q1 = 120*(pi/180)
 q2 = 150*(pi/180)
 q3 = -120*(pi/180)
-qe_target = [q0; q1; q2; q3]
+a_target = [q0; q1; q2; q3]
 
 Tf = 1
 h = 0.01
@@ -91,12 +91,14 @@ global k = 0
 for kk = 2:(N-1)
     
     global k = kk
-    
-    if k == 1 || k == 2
-        global F = u_f([0 0 0 0 0])  # enforce no input for first two timesteps
+
+    a = a_joint(qhist[:, k])
+    a_prev = a_joint(qhist[:, k-1])
+
+    if k == 1 || k == 2  # enforce no input for first two timesteps
+        global F = u_f([0 0 0 0 0])  
     else
-        global F = u_f([0 0 0 0 0]*1e-5)
-        # global F = qe_control(qe_target, qe_pos, b_orient)
+        global F = a_control(a_target, a, a_vel(a, a_prev, h))
     end
 
     z_guess = [qhist[:,k]; zeros(n_c); 1]
@@ -104,23 +106,22 @@ for kk = 2:(N-1)
     qhist[:,k+1] .= z_sol[1:n_q]
     λhist[:,k] .= z_sol[n_q + 1:n_q + n_c]
     shist[:,k] .= z_sol[n_q + n_c + 1]  # only one slack variable
-    
+
     global F_prev = F
+
     e = constraint_check(z_sol, 1e-6)
     print("Simulation ", round(kk/(N-1)*100, digits=3), " % complete \n")
     flush(stdout)
     # print("\n", e, "\n")
-    
+    #=
     if e == true
         print("\n Sim stopped due to ipopt infeasibility \n")
         break
     end
-    
-    #=
-    if kk/(N-1)*100 > 41
+    =#
+    if kk/(N-1)*100 > 36
         break
     end
-    =#
     
 end
 
@@ -144,18 +145,33 @@ function angle_look()
     return an
 end
 
+function anglebt_look()
+    an = zeros(N)
+    for i in 1:(N-1)
+        Q0 = qhist[11:14, i]
+        Q1 = qhist[18:21, i]
+        an[i] = anglebt(Q0, Q1)
+    end
+    return an
+end
+
 ph = pl.plot(thist,signed_d(), title="signed dist from foot to ground plane")
 pbz = pl.plot(thist,qhist[3,:], title="height of body")
 plam = pl.plot(λhist[26,:],title="contact force")
 pslack = pl.plot(shist[1, :],title="slackvar")
 pan = pl.plot(thist, angle_look().*180/pi,title="angle b/t 0 and 1")
+panbt = pl.plot(thist, anglebt_look().*180/pi,title="anglebt b/t 0 and 1")
 
 pl.display(ph)
 pl.display(pbz)
 pl.display(plam)
 pl.display(pslack)
 pl.display(pan)
+pl.display(panbt)
 
+mvis = urdf_init()
+sleep(1)
 for j in 1:5
-    hopper_vis(qhist)
+    print("\n Visualization starting now, replay #", j, "\n")
+    urdf_vis(mvis, qhist)
 end

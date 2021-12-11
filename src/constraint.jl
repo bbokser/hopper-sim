@@ -153,19 +153,19 @@ function constraint_check(z, n_tol)
     c5 = norm(qn[25:28])^2 - 1
     c6 = norm(qn[32:35])^2 - 1
     c7 = con(qn)  # 24x1
-    c8 = s - λ[26]*con(qn)[n_c]  # 1x1
+    c8 = s - λ[n_c]*con(qn)[n_c]  # 1x1
     A = [c1; c2; c3; c4; c5; c6; c7[1:n_c-3]]  # 23
     B = [c7[n_c-2:n_c]; c8]  #24-26
-    if !isapprox(A, zeros(n_eq); atol=n_tol, rtol=0)  # 58
+    if !isapprox(A, zeros(size(A)[1]); atol=n_tol, rtol=0)  # 58
         e = 1
-        print("\n", A, "\n")
-        print(findall(A .< -ones(n_eq)*n_tol), " is less than 0 \n")
-        print(findall(A .> ones(n_eq)*n_tol), " is greater than 0 \n")
+        #print("\n", A, "\n")
+        print(findall(A .< -ones(size(A)[1])*n_tol), " is less than 0 \n")
+        print(findall(A .> ones(size(A)[1])*n_tol), " is greater than 0 \n")
         
-    elseif B < -ones(2)*n_tol  #25
+    elseif B < -ones(size(B)[1])*n_tol  #25
         e = 1
-        print("\n", B, "\n")
-        print(findall(B .< -ones(3)*n_tol))  # 25
+        #print("\n", B, "\n")
+        print(findall(B .< -ones(size(B)[1])*n_tol))  # 25
     else
         e = 0
     end

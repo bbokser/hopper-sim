@@ -4,14 +4,15 @@ using CoordinateTransformations
 using Rotations
 import Plots as pl
 
-vis = Visualizer()
-render(vis)
 
-# Zoom in--the robot falls through floor since there is no contact
+function geom_init()
+    vis = Visualizer()
+    render(vis)
+    delete!(vis)
+end
 
-delete!(vis)
+function geom_vis(qhist)
 
-function hopper_vis(qhist)
     green_material = MeshPhongMaterial(color=pl.RGBA(0, 1, 0, 0.8))
     red_material = MeshPhongMaterial(color=pl.RGBA(1, 0, 0, 0.8))
 
@@ -52,4 +53,46 @@ function hopper_vis(qhist)
     end
 
     return nothing
+end
+
+function urdf_init()
+    curdir = pwd()
+    urdfpath = joinpath(curdir, "res/flyhopper_robot/urdf/flyhopper_robot_base_call.urdf")
+    leg = parse_urdf(urdfpath, floating=true)
+    # state = MechanismState(leg)
+    # mvis = MechanismVisualizer(doublependulum, Skeleton(randomize_colors=true, inertias=false));
+    mvis = MechanismVisualizer(leg, URDFVisuals(urdfpath));
+
+    render(mvis)
+    return mvis
+end
+
+function urdf_vis(mvis, qhist)
+
+    for k = 1:N
+        q = copy(qhist[:, k])
+        pb = q[1:3]
+        Qb = q[4:7]
+        Q0 = q[11:14]
+        Q1 = q[18:21]
+        Q2 = q[25:28]
+        Q3 = q[32:35]
+        
+        Qb0 = L(Qb)'*Q0
+        Q01 = L(Q0)'*Q1
+        Qb2 = L(Qb)'*Q2
+        Q23 = L(Q2)'*Q3
+    
+        # convert quaternions to joint angles
+        a0 = -anglesolve(Qb0) +30*(pi/180)
+        a1 = -anglesolve(Q01) +120*(pi/180)
+        a2 = -anglesolve(Qb2) +150*(pi/180)
+        a3 = anglesolve(Q23) -120*(pi/180)
+    
+        #-0.5235987755982988, -2.6179938779914944, -2.0943951023931953, 2.0943951023931953
+        q_array = vcat(Qb, pb, [a0, a2, a1, a3])
+        # @show [a0, a2, a1, a3]
+        set_configuration!(mvis, q_array)
+        sleep(0.1)
+    end
 end

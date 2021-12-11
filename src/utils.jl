@@ -56,7 +56,12 @@ function anglesolve(Q)
     2 * atan(norm(Q[2:4]),Q[1])
 end
 
-function jointangles(q)
+function anglebt(Q1, Q2)
+    # get smallest angle b/t quaternions
+    acos((Q1'*Q2) / (norm(Q1)*norm(Q2)))
+end
+
+function a_joint(q)
     # convert quaternions to relative joint angles b/t links
 
     Qb = q[4:7]
@@ -79,6 +84,11 @@ function jointangles(q)
 
 end
 
+function a_vel(a, a_prev, dt)
+    # get joint velocities from current and previous joint angle
+    return (a .- a_prev)/dt
+end
+#=
 function a_urdf(a)
     # adjust angles for urdf animation
     a0 = a[1] +30*(pi/180)
@@ -88,3 +98,4 @@ function a_urdf(a)
     
     return [a0, a2, a1, a3]
 end
+=#

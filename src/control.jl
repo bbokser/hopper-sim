@@ -6,12 +6,14 @@ function u_f(u)
     # u[4] -> joint3
     # u[5] -> joint4 (parallel constraint)
 
+    u5 = 0  # we're not outputting torque there anyway
+
     #Corresponding wrench "F" for each link
     Fk = [zeros(4); -u[1]-u[3]; 0; # body
         zeros(4); u[1]-u[2]; 0; # link0
-        zeros(4); u[2]+u[5]; 0; # link1
+        zeros(4); u[2]+u5; 0; # link1
         zeros(4); u[3]-u[4]; 0; # link2
-        zeros(4); u[4]-u[5]; 0] # link3
+        zeros(4); u[4]-u5; 0] # link3
 
     return Fk
 end
@@ -19,10 +21,10 @@ end
 function a_control(a_target, a_pos, a_vel)
     # a_target: joint angle target
     # a_pos: joint angles
-    kp = 1
-    kd = 0.05
-
-    u = kp*(a_target-a_pos) - kd*(-a_vel)
+    kp = 0.075
+    kd = copy(kp)*0.05
+    print("a_pos = ", a_pos.*180/pi, "\n")
+    u = kp*(a_pos-a_target) + kd*(a_vel)
     Fk = u_f(u)  # convert torque input to wrench
 
     return Fk

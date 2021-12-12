@@ -122,7 +122,7 @@ for kk = 2:(N-1)
         break
     end
     
-    #if kk/(N-1)*100 > 25; break; end
+    if kk/(N-1)*100 > 39; break; end
     
 end
 

@@ -96,7 +96,7 @@ end
 function objective(z)
     qn = z[1:n_q]
     λ = z[n_q+1:n_q+n_c]
-    s = z[n_q+n_c+1]
+    s = z[n_q+n_c+1:n_q+n_c+n_s]
     
     return s # sum(s) #Minimize slacks associated with complementarity conditions
 end
@@ -104,7 +104,7 @@ end
 function constraint!(c,z)
     qn = z[1:n_q]
     λ = z[n_q+1:n_q+n_c]
-    s = z[n_q+n_c+1]
+    s = z[n_q+n_c+1:n_q+n_c+n_s]
 
     # nonlinear DEL equation                (30 equality constraint)   c1
     # quaternion norm squared - 1 = 0       (5 equality constraints)   c2-c6
@@ -119,8 +119,8 @@ function constraint!(c,z)
     c4 = norm(qn[18:21])^2 - 1
     c5 = norm(qn[25:28])^2 - 1
     c6 = norm(qn[32:35])^2 - 1
-    c7 = con(qn)  # 25x1
-    c8 = s - λ[n_c]*con(qn)[n_c]  # 1x1
+    c7 = con(qn)  # 26x1
+    c8 = s .- Diagonal(λ[n_c-n_s+1:n_c])*con(qn)[n_c-n_s+1:n_c]  # 1x1
     c .= [c1; c2; c3; c4; c5; c6; c7; c8]
 
     return nothing
@@ -144,7 +144,7 @@ end
 function constraint_check(z, n_tol)
     qn = z[1:n_q]
     λ = z[n_q+1:n_q+n_c]
-    s = z[n_q+n_c+1]
+    s = z[n_q+n_c+1:n_q+n_c+n_s]
 
     c1 = DEL(qhist[:,k-1], qhist[:,k], qn, λ, F_prev, F, ghist[:, k])  # 30x1
     c2 = norm(qn[4:7])^2 - 1  # 1x1
@@ -153,7 +153,7 @@ function constraint_check(z, n_tol)
     c5 = norm(qn[25:28])^2 - 1
     c6 = norm(qn[32:35])^2 - 1
     c7 = con(qn)  # 24x1
-    c8 = s - λ[n_c]*con(qn)[n_c]  # 1x1
+    c8 = s - Diagonal(λ[n_c-n_s+1:n_c])*con(qn)[n_c-n_s+1:n_c] # 1x1
     A = [c1; c2; c3; c4; c5; c6; c7[1:n_c-n_c_ineq]]  # 23
     B = [c7[n_c-n_c_ineq+1:n_c]; c8]  #24
     if !isapprox(A, zeros(size(A)[1]); atol=n_tol, rtol=0)  # 58

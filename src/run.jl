@@ -65,11 +65,11 @@ global const n_c = size(con(q_0))[1]  # number of constraint function rows corre
 global const n_q = size(q_0)[1]  # number of state rows, 35
 
 #Solve with IPOPT
-n_nlp = n_q + n_c + 1  # size of decision variables
-m_nlp = n_q + n_c + 1  # size of constraint! output
-n_s = 1  # number of complementary slackness constraints, MUST UPDATE MANUALLY
+n_s = 3  # number of complementary slackness constraints, MUST UPDATE MANUALLY
+n_nlp = n_q + n_c + n_s  # size of decision variables
+m_nlp = n_q + n_c + n_s  # size of constraint! output
 n_c_ineq = 3  # no. of ineq constraints corresponding to lagrange multipliers, MUST UPDATE MANUALLY
-n_ineq = n_c_ineq+n_s  # total number of inequality constraints, MUST UPDATE MANUALLY
+n_ineq = n_c_ineq+n_s  # total number of inequality constraints
 n_eq = 30+5+n_c-n_c_ineq  # number of equality constraints, 58
 #Specify the indicies of c (constraint output) that should be non-negative.
 #The rest will be treated as equality constraints.
@@ -104,7 +104,7 @@ for kk = 2:(N-1)
         # global F = a_control(a_target, a, a_vel(a, a_prev, h))
     end
 
-    z_guess = [qhist[:,k]; zeros(n_c); n_s]
+    z_guess = [qhist[:,k]; zeros(n_c); ones(n_s)]
     z_sol = ipopt_solve(z_guess, nlp_prob, print=0);
     qhist[:,k+1] .= z_sol[1:n_q]
     λhist[:,k] .= z_sol[n_q + 1:n_q + n_c]
@@ -122,7 +122,7 @@ for kk = 2:(N-1)
         break
     end
     
-    # if kk/(N-1)*100 > 28; break; end
+    # if kk/(N-1)*100 > 30; break; end
     
 end
 

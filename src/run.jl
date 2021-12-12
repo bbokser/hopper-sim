@@ -100,8 +100,8 @@ for kk = 2:(N-1)
     if k == 1 || k == 2  # enforce no input for first two timesteps
         global F = u_f([0 0 0 0 0])  
     else
-        global F = u_f([0 1 0 0 0])*1e-4
-        # global F = a_control(a_target, a, a_vel(a, a_prev, h))
+        # global F = u_f([0 0 0 1 0])*1e-4
+        global F = a_control(a_target, a, a_vel(a, a_prev, h))
     end
 
     z_guess = [qhist[:,k]; zeros(n_c); ones(n_s)]
@@ -122,7 +122,7 @@ for kk = 2:(N-1)
         break
     end
     
-    # if kk/(N-1)*100 > 30; break; end
+    #if kk/(N-1)*100 > 25; break; end
     
 end
 
@@ -156,20 +156,23 @@ function angle_y_look()
     return an
 end
 
-ph = pl.plot(thist,signed_d(), title="signed dist from foot to ground plane")
-pbz = pl.plot(thist,qhist[3,:], title="height of body")
-plam = pl.plot(λhist[n_c,:],title="contact force")
-pslack = pl.plot(shist[1, :],title="slackvar")
-pan = pl.plot(thist, angle_look().*180/pi,title="angle b/t 0 and 1")
-panbt = pl.plot(thist, angle_y_look().*180/pi,title="angle_y b/t 0 and 1")
+plot = false
 
-pl.display(ph)
-pl.display(pbz)
-pl.display(plam)
-pl.display(pslack)
-pl.display(pan)
-pl.display(panbt)
+if plot == true
+    ph = pl.plot(thist,signed_d(), title="signed dist from foot to ground plane")
+    pbz = pl.plot(thist,qhist[3,:], title="height of body")
+    plam = pl.plot(λhist[n_c,:],title="contact force")
+    pslack = pl.plot(shist[1, :],title="slackvar")
+    pan = pl.plot(thist, angle_look().*180/pi,title="angle b/t 0 and 1")
+    panbt = pl.plot(thist, angle_y_look().*180/pi,title="angle_y b/t 0 and 1")
 
+    pl.display(ph)
+    pl.display(pbz)
+    pl.display(plam)
+    pl.display(pslack)
+    pl.display(pan)
+    pl.display(panbt)
+end
 
 urdf = true  # for now manually change this
 

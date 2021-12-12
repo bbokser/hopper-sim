@@ -98,7 +98,7 @@ function objective(z)
     λ = z[n_q+1:n_q+n_c]
     s = z[n_q+n_c+1:n_q+n_c+n_s]
     
-    return s # sum(s) #Minimize slacks associated with complementarity conditions
+    return sum(s) #Minimize slacks associated with complementarity conditions
 end
 
 function constraint!(c,z)

@@ -88,7 +88,6 @@ function MOI.eval_objective(prob::MOI.AbstractNLPEvaluator, x)
 end
 
 function MOI.eval_objective_gradient(prob::MOI.AbstractNLPEvaluator, grad_f, x)
-    @show objective
     ForwardDiff.gradient!(grad_f,objective,x)
     return nothing
 end

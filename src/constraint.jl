@@ -1,7 +1,7 @@
 function con(q)
     # joint constraint function
     # c(q_0) should be all zeros
-    c_ = zeros(eltype(q), 26)
+    c_ = zeros(eltype(q), 24)
     
     rb = q[1:3]
     Qb = q[4:7]
@@ -27,9 +27,9 @@ function con(q)
     c_[16:18] = r2 + rotate(Q2, l2 - l_c2) - r3 - rotate(Q3, -l_c3)
     c_[19:20] = [0 1 0 0; 0 0 0 1]*L(Q2)'*Q3 
     c_[21:23] = r1 + rotate(Q1, l1 - l_c1) - r3 - rotate(Q3, lc-l_c3)
-    c_[24] = (pi-angle_y(Q0, Q1)) - 18*pi/180  # constrain relative angle between links 0 and 1
-    c_[25] = 166*pi/180 - (pi-angle_y(Q0, Q1))
-    c_[26] = rf[3] - 0.025  # subtract radius of foot
+    #c_[24] = (pi-angle_y(Q0, Q1)) - 18*pi/180  # constrain relative angle between links 0 and 1
+    #c_[25] = 166*pi/180 - (pi-angle_y(Q0, Q1))
+    c_[24] = rf[3] - 0.025  # subtract radius of foot
     return c_
 end
 
@@ -120,7 +120,8 @@ function constraint!(c,z)
     c5 = norm(qn[25:28])^2 - 1
     c6 = norm(qn[32:35])^2 - 1
     c7 = con(qn)  # 26x1
-    c8 = s .- Diagonal(λ[n_c-n_s+1:n_c])*con(qn)[n_c-n_s+1:n_c]  # 1x1
+    # c8 = s .- Diagonal(λ[n_c-n_s+1:n_c])*con(qn)[n_c-n_s+1:n_c]  # 3x1
+    c8 = s - λ[n_c]*con(qn)[n_c]  # 1x1
     c .= [c1; c2; c3; c4; c5; c6; c7; c8]
 
     return nothing
@@ -134,9 +135,6 @@ function primal_bounds(n)
     x_l[1:n_q+n_c-1] = -Inf*ones(n_q+n_c-1)  # 35 + 24 - 1
     
     x_u = Inf*ones(n)
-
-    x_l[24] = 0
-    x_l[25] = 0
 
     return x_l, x_u
 end
@@ -153,7 +151,8 @@ function constraint_check(z, n_tol)
     c5 = norm(qn[25:28])^2 - 1
     c6 = norm(qn[32:35])^2 - 1
     c7 = con(qn)  # 24x1
-    c8 = s - Diagonal(λ[n_c-n_s+1:n_c])*con(qn)[n_c-n_s+1:n_c] # 1x1
+    # c8 = s - Diagonal(λ[n_c-n_s+1:n_c])*con(qn)[n_c-n_s+1:n_c] # 1x1
+    c8 = s - λ[n_c]*con(qn)[n_c]  # 1x1
     A = [c1; c2; c3; c4; c5; c6; c7[1:n_c-n_c_ineq]]  # 23
     B = [c7[n_c-n_c_ineq+1:n_c]; c8]  #24
     if !isapprox(A, zeros(size(A)[1]); atol=n_tol, rtol=0)  # 58

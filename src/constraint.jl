@@ -133,10 +133,10 @@ function constraint!(c,z)
     c5 = norm(qn[25:28])^2 - 1
     c6 = norm(qn[32:35])^2 - 1
     c7 = constraintfn[1:n_c-n_c_ineq]
-    c8 = J(qn)[1:2, :]*vm + λf.*b/smoothsqrt(b'*b);  # maximum dissipation
+    c8 = J(qn)[1:2, :]*vm + Diagonal(λf)*b/smoothsqrt(b'*b);  # maximum dissipation
     
     # inequality constraints
-    c9 = s[4] .- λf*(μ.*n - smoothsqrt(b'*b)) # relaxed complementarity (friction)
+    c9 = s[4:5] - λf.*(μ*n - smoothsqrt(b'*b)) # relaxed complementarity (friction)
     c10 = constraintfn[n_c_eq+1:n_c-1]  # relative angle between l0 and l1
     c11 = constraintfn[n_c]  # signed distance
     c12 = s[1:3] - Diagonal(λ[n_c_eq+1:n_c])*con(qn)[n_c_eq+1:n_c]  # 3x1
@@ -152,8 +152,9 @@ function primal_bounds(n)
     # x_l ≤ [q; λ; s; b; λf] ≤ x_u
     x_l = -Inf*ones(n)  # 60
     x_l[n_q+n_c] = 0  # normal force corresponding to signed dist constr
-    x_l[n_q+n_c+n_s+1:n_q+n_c+n_s+n_b] = zeros(n_b)
-
+    x_l[n_q+n_c+n_s+1:n_q+n_c+n_s+n_b] = zeros(n_b)  # b
+    x_l[n_q+n_c+n_s+n_b+1:end] = zeros(n_b)  # λf
+    
     x_u = Inf*ones(n)
 
     return x_l, x_u
@@ -179,10 +180,10 @@ function constraint_check(z, n_tol)
     c5 = norm(qn[25:28])^2 - 1
     c6 = norm(qn[32:35])^2 - 1
     c7 = constraintfn[1:n_c-n_c_ineq]
-    c8 = J(qn)[1:2, :]*vm + λf.*b/smoothsqrt(b'*b);  # maximum dissipation
+    c8 = J(qn)[1:2, :]*vm + Diagonal(λf)*b/smoothsqrt(b'*b);  # maximum dissipation
     
     # inequality constraints
-    c9 = s[4] .- λf*(μ.*n - smoothsqrt(b'*b)) # relaxed complementarity (friction)
+    c9 = s[4:5] - λf.*(μ*n - smoothsqrt(b'*b)) # relaxed complementarity (friction)
     c10 = constraintfn[n_c_eq+1:n_c-1]  # relative angle between l0 and l1
     c11 = constraintfn[n_c]  # signed distance
     c12 = s[1:3] - Diagonal(λ[n_c_eq+1:n_c])*con(qn)[n_c_eq+1:n_c]  # 3x1

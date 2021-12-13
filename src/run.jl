@@ -66,9 +66,10 @@ global const n_q = size(q_0)[1]  # number of state rows, 35
 
 #Solve with IPOPT
 n_b = 2 # number of friction forces (x and y), MUST UPDATE MANUALLY
-n_s = 4  # number of complementary slackness constraints, MUST UPDATE MANUALLY
-n_nlp = n_q + n_c + n_s + n_b + 1  # size of decision variables
-n_c_ineq = 3  # no. of ineq constraints corresponding to lagrange multipliers, MUST UPDATE MANUALLY
+n_λf = copy(n_b)  # size of λf
+n_s = 5  # number of complementary slackness constraints, MUST UPDATE MANUALLY
+n_nlp = n_q + n_c + n_s + n_b + n_λf  # size of decision variables
+n_c_ineq = 3  # no. of ineq constraints corresponding to λ (NOT λf), MUST UPDATE MANUALLY
 n_c_eq = n_c-n_c_ineq
 n_ineq = n_c_ineq+n_s+1  # total number of inequality constraints, MUST UPDATE MANUALLY
 n_eq = 30+5+n_c-n_c_ineq+n_b  # number of equality constraints
@@ -89,7 +90,7 @@ qhist[:,2] .= q_0  # this may need to be fixed
 shist = zeros(n_s,N-1)
 
 bhist = zeros(n_b,N-1)
-λfhist = zeros(1,N-1)
+λfhist = zeros(n_b,N-1)
 
 global F = u_f([0 0 0 0 0])
 global F_prev = u_f([0 0 0 0 0])
@@ -110,13 +111,13 @@ for kk = 2:(N-1)
         # global F = a_control(a_target, a, a_vel(a, a_prev, h))
     end
 
-    z_guess = [qhist[:,k]; zeros(n_c); ones(n_s); zeros(n_b); 0]
+    z_guess = [qhist[:,k]; zeros(n_c); ones(n_s); zeros(n_b); zeros(n_b)]
     z_sol = ipopt_solve(z_guess, nlp_prob, print=0);
     qhist[:,k+1] .= z_sol[1:n_q]
     λhist[:,k] .= z_sol[n_q + 1:n_q + n_c]
     shist[:,k] .= z_sol[n_q + n_c + 1:n_q + n_c + n_s]
     bhist[:,k] .= z_sol[n_q+n_c+n_s+1:n_q+n_c+n_s+n_b]
-    λfhist[:,k] .= z_sol[n_q+n_c+n_s+n_b+1:end]
+    λfhist[:,k] .= z_sol[n_q+n_c+n_s+n_b+1:end]  # :end
 
     global F_prev = F
 
@@ -124,13 +125,13 @@ for kk = 2:(N-1)
     print("Simulation ", round(kk/(N-1)*100, digits=3), " % complete \n")
     # flush(stdout)
     # print("\n", e, "\n")
-    
+    #=
     if e == true
         print("\n Sim stopped due to ipopt infeasibility \n")
         break
     end
-    
-    # if kk/(N-1)*100 > 39; break; end
+    =#
+    if kk/(N-1)*100 > 5; break; end
     
 end
 

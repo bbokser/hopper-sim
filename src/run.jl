@@ -66,10 +66,10 @@ global const n_q = size(q_0)[1]  # number of state rows, 35
 
 #Solve with IPOPT
 n_b = 2 # number of friction forces (x and y), MUST UPDATE MANUALLY
-n_λf = copy(n_b)  # size of λf
-n_s = 5  # number of complementary slackness constraints, MUST UPDATE MANUALLY
+n_λf = 1  # size of λf
+n_s = 2  # number of complementary slackness constraints, MUST UPDATE MANUALLY
 n_nlp = n_q + n_c + n_s + n_b + n_λf  # size of decision variables
-n_c_ineq = 3  # no. of ineq constraints corresponding to λ (NOT λf), MUST UPDATE MANUALLY
+n_c_ineq = 0  # no. of ineq constraints corresponding to λ (NOT λf), MUST UPDATE MANUALLY
 n_c_eq = n_c-n_c_ineq
 n_ineq = n_c_ineq+n_s+1  # total number of inequality constraints, MUST UPDATE MANUALLY
 n_eq = 30+5+n_c-n_c_ineq+n_b  # number of equality constraints
@@ -78,7 +78,7 @@ m_nlp = n_eq + n_ineq  # size of constraint! output
 #Specify the indicies of c (constraint output) that should be non-negative.
 #The rest will be treated as equality constraints.
 #This can vary depending on how you stacked up c.
-nonnegative_constraint_indices = (n_eq+1:n_eq+n_ineq)
+nonnegative_constraint_indices = (n_eq+1:m_nlp)
 nlp_prob = ProblemMOI(n_nlp,m_nlp, idx_ineq=nonnegative_constraint_indices);
 
 #Initial conditions
@@ -111,8 +111,8 @@ for kk = 2:(N-1)
         # global F = a_control(a_target, a, a_vel(a, a_prev, h))
     end
 
-    z_guess = [qhist[:,k]; zeros(n_c); ones(n_s); zeros(n_b); zeros(n_b)]
-    z_sol = ipopt_solve(z_guess, nlp_prob, print=0);
+    z_guess = [qhist[:,k]; zeros(n_c); ones(n_s); zeros(n_b); ones(n_b)]
+    z_sol = ipopt_solve(z_guess, nlp_prob, print=5);
     qhist[:,k+1] .= z_sol[1:n_q]
     λhist[:,k] .= z_sol[n_q + 1:n_q + n_c]
     shist[:,k] .= z_sol[n_q + n_c + 1:n_q + n_c + n_s]
@@ -121,17 +121,12 @@ for kk = 2:(N-1)
 
     global F_prev = F
 
-    e = constraint_check(z_sol, 1e-6)
+    e = constraint_check(z_sol, 1e-6)  # print("\n", e, "\n")
+    if e == true; break; end
     print("Simulation ", round(kk/(N-1)*100, digits=3), " % complete \n")
     # flush(stdout)
-    # print("\n", e, "\n")
-    #=
-    if e == true
-        print("\n Sim stopped due to ipopt infeasibility \n")
-        break
-    end
-    =#
-    if kk/(N-1)*100 > 5; break; end
+    
+    # if kk/(N-1)*100 > 5; break; end
     
 end
 
@@ -165,22 +160,21 @@ function angle_y_look()
     return an
 end
 
-plot = false
+plot = true
 
 if plot == true
     ph = pl.plot(thist,signed_d(), title="signed dist from foot to ground plane")
     pbz = pl.plot(thist,qhist[3,:], title="height of body")
     plam = pl.plot(λhist[n_c,:],title="contact force")
-    pslack = pl.plot(shist[1, :],title="slackvar")
-    pan = pl.plot(thist, angle_look().*180/pi,title="angle b/t 0 and 1")
+    # pslack = pl.plot(shist,title="slackvar")
     panbt = pl.plot(thist, angle_y_look().*180/pi,title="angle_y b/t 0 and 1")
-
+    pb = pl.plot(thist[:, 1:end-1], bhist',title="angle_y b/t 0 and 1")
     pl.display(ph)
     pl.display(pbz)
     pl.display(plam)
-    pl.display(pslack)
-    pl.display(pan)
+    # pl.display(pslack)
     pl.display(panbt)
+    pl.display(pb)
 end
 
 urdf = true  # for now manually change this

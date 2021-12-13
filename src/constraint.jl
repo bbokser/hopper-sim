@@ -1,7 +1,7 @@
 function con(q)
     # joint constraint function
     # c(q_0) should be all zeros
-    c_ = zeros(eltype(q), 26)
+    c_ = zeros(eltype(q), 24)
     
     rb = q[1:3]
     Qb = q[4:7]
@@ -27,9 +27,7 @@ function con(q)
     c_[16:18] = r2 + rotate(Q2, l2 - l_c2) - r3 - rotate(Q3, -l_c3)
     c_[19:20] = [0 1 0 0; 0 0 0 1]*L(Q2)'*Q3 
     c_[21:23] = r1 + rotate(Q1, l1 - l_c1) - r3 - rotate(Q3, lc-l_c3)
-    c_[24] = (pi-angle_y(Q0, Q1)) - 18*pi/180  # constrain relative angle between links 0 and 1
-    c_[25] = 166*pi/180 - (pi-angle_y(Q0, Q1))
-    c_[26] = rf[3] - 0.025  # subtract radius of foot
+    c_[24] = rf[3] - 0.025  # subtract radius of foot
     return c_
 end
 
@@ -114,12 +112,11 @@ function constraint!(c,z)
     # joint constraints                     (23 equality constraints)  c7
     # maximum dissipation (friction)        (2 equality constraints)   c8
     
-    # friction relaxed complementarity      (1 inequality constraint)  c9
-    # relative angle between l0 and l1      (2 inequality constraints) c10
-    # signed distance of foot from ground   (1 inequality constraint)  c11
-    # collision complementarity foot & RoM  (3 inequality constraints) c12
-    # friction cone                         (1 inequality constraint)  c13
-    
+    # signed distance of foot from ground   (1 inequality constraint)  c9
+    # collision complementarity foot        (1 inequality constraint)  c10
+    # friction cone                         (1 inequality constraint)  c11
+    # friction relaxed complementarity      (1 inequality constraint)  c12
+
     μ = 0.5  # friction coefficient
     vm = (qn-qhist[:,k])/h
     constraintfn = con(qn)
@@ -133,16 +130,14 @@ function constraint!(c,z)
     c5 = norm(qn[25:28])^2 - 1
     c6 = norm(qn[32:35])^2 - 1
     c7 = constraintfn[1:n_c-n_c_ineq]
-    c8 = J(qn)[1:2, :]*vm + Diagonal(λf)*b/smoothsqrt(b'*b);  # maximum dissipation
+    c8 = J(qn)[1:2, :]*vm + λf.*b/smoothsqrt(b'*b);  # maximum dissipation
     
     # inequality constraints
-    c9 = s[4:5] - λf.*(μ*n - smoothsqrt(b'*b)) # relaxed complementarity (friction)
-    c10 = constraintfn[n_c_eq+1:n_c-1]  # relative angle between l0 and l1
-    c11 = constraintfn[n_c]  # signed distance
-    c12 = s[1:3] - Diagonal(λ[n_c_eq+1:n_c])*con(qn)[n_c_eq+1:n_c]  # 3x1
-    c13 = μ.*n - smoothsqrt(b'*b); # friction cone
-
-    c .= [c1; c2; c3; c4; c5; c6; c7; c8; c9; c10; c11; c12; c13]
+    # c9 = constraintfn[n_c]  # signed distance
+    c10 = s[1] - λ[n_c]*constraintfn[n_c]  # relaxed complementarity (signed dist) 1x1
+    c11 = μ*n - smoothsqrt(b'*b); # friction cone
+    c12 = s[2] .- λf*(μ*n - smoothsqrt(b'*b)) # relaxed complementarity (friction)
+    c .= [c1; c2; c3; c4; c5; c6; c7; c8; c10; c11; c12]
 
     return nothing
 end
@@ -152,8 +147,8 @@ function primal_bounds(n)
     # x_l ≤ [q; λ; s; b; λf] ≤ x_u
     x_l = -Inf*ones(n)  # 60
     x_l[n_q+n_c] = 0  # normal force corresponding to signed dist constr
-    x_l[n_q+n_c+n_s+1:n_q+n_c+n_s+n_b] = zeros(n_b)  # b
-    x_l[n_q+n_c+n_s+n_b+1:end] = zeros(n_b)  # λf
+    x_l[n_q+n_c+1:n_q+n_c+n_s] = zeros(n_s)  # slack variables
+    x_l[n_q+n_c+n_s+n_b+1:end] = zeros(n_λf)  # λf is an unsigned magnitude?
     
     x_u = Inf*ones(n)
 
@@ -180,28 +175,34 @@ function constraint_check(z, n_tol)
     c5 = norm(qn[25:28])^2 - 1
     c6 = norm(qn[32:35])^2 - 1
     c7 = constraintfn[1:n_c-n_c_ineq]
-    c8 = J(qn)[1:2, :]*vm + Diagonal(λf)*b/smoothsqrt(b'*b);  # maximum dissipation
+    c8 = J(qn)[1:2, :]*vm + λf.*b/smoothsqrt(b'*b);  # maximum dissipation
     
     # inequality constraints
-    c9 = s[4:5] - λf.*(μ*n - smoothsqrt(b'*b)) # relaxed complementarity (friction)
-    c10 = constraintfn[n_c_eq+1:n_c-1]  # relative angle between l0 and l1
-    c11 = constraintfn[n_c]  # signed distance
-    c12 = s[1:3] - Diagonal(λ[n_c_eq+1:n_c])*con(qn)[n_c_eq+1:n_c]  # 3x1
-    c13 = μ.*n - smoothsqrt(b'*b); # friction cone
+    # c9 = constraintfn[n_c]  # signed distance
+    c10 = s[1] - λ[n_c]*constraintfn[n_c]  # 1x1
+    c11 = μ*n - smoothsqrt(b'*b); # friction cone
+    c12 = s[2] .- λf*(μ*n - smoothsqrt(b'*b)) # relaxed complementarity (friction)
     
     A = [c1; c2; c3; c4; c5; c6; c7; c8]
-    B = [c9; c10; c11; c12; c13]
+    B = [c10; c11; c12]
 
     if !isapprox(A, zeros(size(A)[1]); atol=n_tol, rtol=0)  # 58
         e = 1
         #print("\n", A, "\n")
         print(findall(A .< -ones(size(A)[1])*n_tol), " is less than 0 \n")
         print(findall(A .> ones(size(A)[1])*n_tol), " is greater than 0 \n")
-        
+        print("\n Sim stopped due to ipopt infeasibility \n")
     elseif B < -ones(size(B)[1])*n_tol  #25
         e = 1
         #print("\n", B, "\n")
         print(findall(B .< -ones(size(B)[1])*n_tol))  # 25
+        print("\n Sim stopped due to ipopt infeasibility \n")
+    elseif (pi-angle_y(Q0, Q1)) < 18*pi/180  # constrain relative angle between links 0 and 1
+        e = 1
+        print("RoM lower limit surpassed")
+    elseif 166*pi/180 < (pi-angle_y(Q0, Q1))
+        e = 1
+        print("RoM upper limit surpassed")
     else
         e = 0
     end

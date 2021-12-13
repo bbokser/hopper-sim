@@ -92,3 +92,15 @@ function urdf_vis(mvis, qhist)
         sleep(0.1)
     end
 end
+
+#=
+function a_urdf(a)
+    # adjust angles for urdf animation
+    a0 = a[1] +30*(pi/180)
+    a1 = a[2] +120*(pi/180)
+    a2 = a[3] +150*(pi/180)
+    a3 = a[4] -120*(pi/180)
+    
+    return [a0, a2, a1, a3]
+end
+=#

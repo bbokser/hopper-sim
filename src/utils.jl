@@ -91,14 +91,8 @@ function a_vel(a, a_prev, dt)
     # get joint velocities from current and previous joint angle
     return (a .- a_prev)/dt
 end
-#=
-function a_urdf(a)
-    # adjust angles for urdf animation
-    a0 = a[1] +30*(pi/180)
-    a1 = a[2] +120*(pi/180)
-    a2 = a[3] +150*(pi/180)
-    a3 = a[4] -120*(pi/180)
-    
-    return [a0, a2, a1, a3]
+
+function smoothsqrt(x)
+    ϵ = 1e-6
+    return sqrt(x+ϵ*ϵ) - ϵ
 end
-=#

@@ -65,12 +65,15 @@ global const n_c = size(con(q_0))[1]  # number of constraint function rows corre
 global const n_q = size(q_0)[1]  # number of state rows, 35
 
 #Solve with IPOPT
-n_s = 3  # number of complementary slackness constraints, MUST UPDATE MANUALLY
-n_nlp = n_q + n_c + n_s  # size of decision variables
-m_nlp = n_q + n_c + n_s  # size of constraint! output
+n_b = 2 # number of friction forces (x and y), MUST UPDATE MANUALLY
+n_s = 4  # number of complementary slackness constraints, MUST UPDATE MANUALLY
+n_nlp = n_q + n_c + n_s + n_b + 1  # size of decision variables
 n_c_ineq = 3  # no. of ineq constraints corresponding to lagrange multipliers, MUST UPDATE MANUALLY
-n_ineq = n_c_ineq+n_s  # total number of inequality constraints
-n_eq = 30+5+n_c-n_c_ineq  # number of equality constraints, 58
+n_c_eq = n_c-n_c_ineq
+n_ineq = n_c_ineq+n_s+1  # total number of inequality constraints, MUST UPDATE MANUALLY
+n_eq = 30+5+n_c-n_c_ineq+n_b  # number of equality constraints
+m_nlp = n_eq + n_ineq  # size of constraint! output
+
 #Specify the indicies of c (constraint output) that should be non-negative.
 #The rest will be treated as equality constraints.
 #This can vary depending on how you stacked up c.
@@ -84,6 +87,9 @@ qhist[:,2] .= q_0  # this may need to be fixed
 
 λhist = zeros(n_c,N-1)
 shist = zeros(n_s,N-1)
+
+bhist = zeros(n_b,N-1)
+λfhist = zeros(1,N-1)
 
 global F = u_f([0 0 0 0 0])
 global F_prev = u_f([0 0 0 0 0])
@@ -100,15 +106,17 @@ for kk = 2:(N-1)
     if k == 1 || k == 2  # enforce no input for first two timesteps
         global F = u_f([0 0 0 0 0])  
     else
-        # global F = u_f([0 0 0 1 0])*1e-4
-        global F = a_control(a_target, a, a_vel(a, a_prev, h))
+        global F = u_f([0 0 0 0 0])*1e-4
+        # global F = a_control(a_target, a, a_vel(a, a_prev, h))
     end
 
-    z_guess = [qhist[:,k]; zeros(n_c); ones(n_s)]
+    z_guess = [qhist[:,k]; zeros(n_c); ones(n_s); zeros(n_b); 0]
     z_sol = ipopt_solve(z_guess, nlp_prob, print=0);
     qhist[:,k+1] .= z_sol[1:n_q]
     λhist[:,k] .= z_sol[n_q + 1:n_q + n_c]
     shist[:,k] .= z_sol[n_q + n_c + 1:n_q + n_c + n_s]
+    bhist[:,k] .= z_sol[n_q+n_c+n_s+1:n_q+n_c+n_s+n_b]
+    λfhist[:,k] .= z_sol[n_q+n_c+n_s+n_b+1:end]
 
     global F_prev = F
 
@@ -122,7 +130,7 @@ for kk = 2:(N-1)
         break
     end
     
-    if kk/(N-1)*100 > 39; break; end
+    # if kk/(N-1)*100 > 39; break; end
     
 end
 

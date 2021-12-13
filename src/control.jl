@@ -10,10 +10,10 @@ function u_f(u)
 
     #Corresponding wrench "F" for each link
     Fk = [zeros(4); -u[1]-u[3]; 0; # body
-        zeros(4); u[1]-u[2]; 0; # link0
-        zeros(4); u[2]+u5; 0; # link1
-        zeros(4); u[3]-u[4]; 0; # link2
-        zeros(4); u[4]-u5; 0] # link3
+          zeros(4); u[1]-u[2]; 0; # link0
+          zeros(4); u[2]+u5; 0; # link1
+          zeros(4); u[3]-u[4]; 0; # link2
+          zeros(4); u[4]-u5; 0] # link3
 
     return Fk
 end
@@ -40,7 +40,7 @@ function max_to_min(q)
 end
 
 # Kinematics
-function kin_ee(q_min)
+function kin_ee_min(q_min)
     # forward kinematics of the end effector from body pose and joint positions
     rb = q_min[1:3]
     Qb = q_min[4:7]
@@ -61,8 +61,8 @@ function kin_ee(q_min)
 end
 
 # End effector Jacobian
-function J(q_min)
+function J_min(q_min)
     # ree = kin_ee(q_min);
-    jac = ForwardDiff.jacobian(dq->kinematics(dq), q_min)
+    jac = ForwardDiff.jacobian(dq->kin_ee_min(dq), q_min)
     return jac
 end

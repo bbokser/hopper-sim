@@ -141,7 +141,7 @@ function constraint!(c,z)
     c8 = J(qn)[1:2, :]*vm + λf.*b/smoothsqrt(b'*b)  # maximum dissipation
     
     # inequality constraints
-    # c9 = constraintfn[n_c]  # signed distance
+    # c9 = ϕ(qn)  # signed distance
     c10 = s[1] .- n.*ϕ(qn)  # relaxed complementarity (signed dist) 1x1
     c11 = μ*n .- smoothsqrt(b'*b) # friction cone
     c12 = s[2] .- λf.*(μ*n .- smoothsqrt(b'*b)) # relaxed complementarity (friction)

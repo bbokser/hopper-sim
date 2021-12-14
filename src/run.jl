@@ -114,7 +114,7 @@ for kk = 2:(N-1)
     end
 
     z_guess = [qhist[:,k]; zeros(n_c); ones(n_s); zeros(n_b); ones(n_b); zeros(n_n)]
-    z_sol = ipopt_solve(z_guess, nlp_prob, print=0);
+    z_sol = ipopt_solve(z_guess, nlp_prob, print=1);
     qhist[:,k+1] .= z_sol[1:n_q]
     λhist[:,k] .= z_sol[n_q + 1:n_q + n_c]
     shist[:,k] .= z_sol[n_q + n_c + 1:n_q + n_c + n_s]
@@ -125,7 +125,7 @@ for kk = 2:(N-1)
     global F_prev = F
 
     e = constraint_check(z_sol, 1e-6)  # print("\n", e, "\n")
-    if e == true; break; end
+    # f e == true; break; end
     print("Simulation ", round(kk/(N-1)*100, digits=3), " % complete \n")
     # flush(stdout)
     

@@ -70,7 +70,7 @@ function kin_ee(q)
     # not the most efficient way, but will have to do for now
     #pb = rb + rotate(Qb, l_cb)  # position vector from world frame to *JOINTS* 0 and 2
     #ree = pb + rotate(Q2, l2) + rotate(Q3, lee)  
-    ree = r3 + rotate(Q3, lee-l_c3) # TODO: this is probably better, try
+    ree = r3 + rotate(Q3, lee-l_c3) # this is probably better
 
     return ree  # 3x1
 end

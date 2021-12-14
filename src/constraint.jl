@@ -1,7 +1,7 @@
 function con(q)
     # joint constraint function
     # c(q_0) should be all zeros
-    c_ = zeros(eltype(q), 24)
+    c_ = zeros(eltype(q), 26)
     
     rb = q[1:3]
     Qb = q[4:7]
@@ -27,7 +27,11 @@ function con(q)
     c_[16:18] = r2 + rotate(Q2, l2 - l_c2) - r3 - rotate(Q3, -l_c3)
     c_[19:20] = [0 1 0 0; 0 0 0 1]*L(Q2)'*Q3 
     c_[21:23] = r1 + rotate(Q1, l1 - l_c1) - r3 - rotate(Q3, lc-l_c3)
-    c_[24] = rf[3] - 0.025  # subtract radius of foot
+    # Constrain base so that it can only move in z-axis
+    c_[24] = rb[1]  # constrain base x axis
+    c_[25] = rb[2]  # constrain base y axis
+    # Prevent foot-floor interpenetration
+    c_[26] = rf[3] - 0.025  # subtract radius of foot
     return c_
 end
 
@@ -80,7 +84,9 @@ function DEL(q_1,q_2,q_3,λ,F1,F2,grav)
             del(m1, I1, r1_1, r1_2, r1_3, Q1_1, Q1_2, Q1_3, grav);
             del(m2, I2, r2_1, r2_2, r2_3, Q2_1, Q2_2, Q2_3, grav);
             del(m3, I3, r3_1, r3_2, r3_3, Q3_1, Q3_2, Q3_3, grav)] 
-    
+    #if F1[5] != F2[5]
+    #        print(F1[5], ", ", F2[5], "\n")
+    #end
     return del1 + (h/2.0)*F1 + (h/2.0)*F2 + reshape(h*Dc(q_2)'*λ, 30)
 end
 
@@ -132,10 +138,10 @@ end
 
 function primal_bounds(n)
     #Enforce simple bound constraints on the decision variables (e.g. positivity) here
-    # x_l ≤ [q; λ; s; b; λf] ≤ x_u
+    # x_l ≤ [q; λ; s] ≤ x_u
     x_l = -Inf*ones(n)  # 60
     x_l[n_q+n_c] = 0  # normal force corresponding to signed dist constr
-    x_l[n_q+n_c+1] = 0  # slack variables
+    x_l[n_q+n_c+1] = 0  # slack variable
     
     x_u = Inf*ones(n)
 

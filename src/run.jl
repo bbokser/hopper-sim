@@ -90,6 +90,7 @@ shist = zeros(n_s,N-1)
 
 global F = u_f([0 0 0 0 0])
 global F_prev = u_f([0 0 0 0 0])
+Fhist = zeros(30, N)
 
 global k = 0
 
@@ -100,10 +101,10 @@ for kk = 2:(N-1)
     a = a_joint(qhist[:, k])
     a_prev = a_joint(qhist[:, k-1])
 
-    if k == 1 || k == 2  # enforce no input for first two timesteps
+    if k <= 3  # enforce no input for first two timesteps
         global F = u_f([0 0 0 0 0])  
     else
-        global F = u_f([0 0 0 0 0])*1e-4
+        global F = u_f([0 0 1 0 0])*1e-3
         # global F = a_control(a_target, a, a_vel(a, a_prev, h))
     end
 
@@ -113,8 +114,8 @@ for kk = 2:(N-1)
     λhist[:,k] .= z_sol[n_q + 1:n_q + n_c]
     shist[:,k] .= z_sol[n_q + n_c + 1:n_q + n_c + n_s]
 
-    global F_prev = F
-
+    global F_prev = copy(F)
+    Fhist[:, k] = F
     e = constraint_check(z_sol, 1e-6)  # print("\n", e, "\n")
     if e == true; break; end
     print("Simulation ", round(kk/(N-1)*100, digits=3), " % complete \n")
@@ -141,10 +142,7 @@ function angle_look()
         Q1 = qhist[18:21, i]
         an[i] = pi - anglesolve(L(Q0)'*Q1)
     end
-    return an
-end
-
-function angle_y_look()
+    return anB = Diagonal([1; 0; 1; 0])  # actuator selection matrix
     an = zeros(N)
     for i in 1:(N-1)
         Q0 = qhist[11:14, i]
@@ -160,15 +158,18 @@ if plot == true
     ph = pl.plot(thist,signed_d(), title="signed dist from foot to ground plane")
     pbz = pl.plot(thist,qhist[3,:], title="height of body")
     plam = pl.plot(λhist[n_c,:],title="contact force")
-    # pslack = pl.plot(shist,title="slackvar")
+    pslack = pl.plot(shist,title="slackvar")
     panbt = pl.plot(thist, angle_y_look().*180/pi,title="angle_y b/t 0 and 1")
-    pb = pl.plot(thist[:, 1:end-1], bhist',title="angle_y b/t 0 and 1")
+    pF0 = pl.plot(thist, Fhist[11, :],title="torque acting on link0")
+    pF1 = pl.plot(thist, Fhist[23, :],title="torque acting on link2")
+    pl.display(ph)
     pl.display(ph)
     pl.display(pbz)
     pl.display(plam)
-    # pl.display(pslack)
+    pl.display(pslack)
     pl.display(panbt)
-    pl.display(pb)
+    pl.display(pF0)
+    pl.display(pF1)
 end
 
 urdf = true  # for now manually change this
@@ -184,7 +185,7 @@ end
 mvis = anim_init()
 print("\n Visualization starting in 5 seconds \n")
 sleep(5)
-for j in 1:5
+for j in 1:2
     print("\n Visualization starting now, replay #", j, "\n")
     anim(mvis, qhist)
 end

@@ -21,12 +21,11 @@ end
 function a_control(a_target, a_pos, a_vel)
     # a_target: joint angle target
     # a_pos: joint angles
-    kp = 0.000007
-    kd = copy(kp)*0.05
+    kp = 0.0001
+    kd = copy(kp)*0.02
     print("a_pos = ", a_pos.*180/pi, "\n")
-    
-    B = Diagonal([1; 0; 1; 0])  # actuator selection matrix
     u = kp*(a_pos-a_target) + kd*(a_vel)
+    B = Diagonal([1; 0; 1; 0])  # actuator selection matrix
     Fk = u_f(B*u)  # convert torque input to wrench
     return Fk
 end

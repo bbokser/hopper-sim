@@ -138,14 +138,14 @@ function constraint!(c,z)
     c5 = norm(qn[25:28])^2 - 1
     c6 = norm(qn[32:35])^2 - 1
     c7 = con(qn)
+    # c8 = [0; 0]
     c8 = J(qn)[1:2, :]*vm + λf.*b/smoothsqrt(b'*b)  # maximum dissipation
-    
     # inequality constraints
-    # c9 = ϕ(qn)  # signed distance
+    c9 = ϕ(qn)  # signed distance
     c10 = s[1] .- n.*ϕ(qn)  # relaxed complementarity (signed dist) 1x1
     c11 = μ*n .- smoothsqrt(b'*b) # friction cone
     c12 = s[2] .- λf.*(μ*n .- smoothsqrt(b'*b)) # relaxed complementarity (friction)
-    c .= [c1; c2; c3; c4; c5; c6; c7; c8; c10; c11; c12]
+    c .= [c1; c2; c3; c4; c5; c6; c7; c8; c9; c10; c11; c12]
 
     return nothing
 end
@@ -154,7 +154,6 @@ function primal_bounds(n)
     #Enforce simple bound constraints on the decision variables (e.g. positivity) here
     # x_l ≤ [q; λ; s; b; λf] ≤ x_u
     x_l = -Inf*ones(n)  # 60
-    x_l[n_q+n_c] = 0  # normal force corresponding to signed dist constr
     x_l[n_q+n_c+1:n_q+n_c+n_s] = zeros(n_s)  # slack variables
     x_l[n_q+n_c+n_s+n_b+1:n_q+n_c+n_s+n_b+n_λf] = zeros(n_λf)  # λf is an unsigned magnitude?
     x_l[n_q+n_c+n_s+n_b+n_λf+1:end] = zeros(n_n)  # normal force cannot be into ground

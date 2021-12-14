@@ -72,8 +72,8 @@ n_s = 2  # number of complementary slackness constraints, MUST UPDATE MANUALLY
 n_nlp = n_q + n_c + n_s + n_b + n_λf + n_n  # size of decision variables
 n_c_ineq = 0  # no. of ineq constraints corresponding to λ (NOT λf), MUST UPDATE MANUALLY
 n_c_eq = n_c-n_c_ineq
-n_ineq = n_c_ineq+n_s+1  # total number of inequality constraints, MUST UPDATE MANUALLY
-n_eq = 30+5+n_c-n_c_ineq+n_b  # number of equality constraints
+n_ineq = 4  # total number of inequality constraints, MUST UPDATE MANUALLY
+n_eq = 30+5+n_c+n_b  # number of equality constraints
 m_nlp = n_eq + n_ineq  # size of constraint! output
 
 #Specify the indicies of c (constraint output) that should be non-negative.
@@ -114,7 +114,7 @@ for kk = 2:(N-1)
     end
 
     z_guess = [qhist[:,k]; zeros(n_c); ones(n_s); zeros(n_b); ones(n_b); zeros(n_n)]
-    z_sol = ipopt_solve(z_guess, nlp_prob, print=1);
+    z_sol = ipopt_solve(z_guess, nlp_prob, max_iter=1000, print=0);
     qhist[:,k+1] .= z_sol[1:n_q]
     λhist[:,k] .= z_sol[n_q + 1:n_q + n_c]
     shist[:,k] .= z_sol[n_q + n_c + 1:n_q + n_c + n_s]
@@ -129,7 +129,7 @@ for kk = 2:(N-1)
     print("Simulation ", round(kk/(N-1)*100, digits=3), " % complete \n")
     # flush(stdout)
     
-    # if kk/(N-1)*100 > 5; break; end
+    if kk/(N-1)*100 > 32; break; end
     
 end
 

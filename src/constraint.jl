@@ -1,7 +1,7 @@
 function con(q)
     # joint constraint function
     # c(q_0) should be all zeros
-    c_ = zeros(eltype(q), 24)
+    c_ = zeros(eltype(q), 23)
     
     rb = q[1:3]
     Qb = q[4:7]
@@ -13,8 +13,6 @@ function con(q)
     Q2 = q[25:28]
     r3 = q[29:31]
     Q3 = q[32:35]
-    
-    rf = r3 + rotate(Q3, lee-l_c3) # position of foot
 
     pb = rb + rotate(Qb, l_cb) # position vector from world frame to *JOINTS* 0 and 2
     
@@ -27,7 +25,6 @@ function con(q)
     c_[16:18] = r2 + rotate(Q2, l2 - l_c2) - r3 - rotate(Q3, -l_c3)
     c_[19:20] = [0 1 0 0; 0 0 0 1]*L(Q2)'*Q3 
     c_[21:23] = r1 + rotate(Q1, l1 - l_c1) - r3 - rotate(Q3, lc-l_c3)
-    c_[24] = rf[3] - 0.025  # subtract radius of foot
     return c_
 end
 
@@ -35,12 +32,28 @@ function Dc(q)
     ForwardDiff.jacobian(dq->con(dq),q)*Ḡ(q)
 end
 
+function ϕ(q)
+    ϕ = zeros(eltype(q), 1)
+    # signed distance
+    r3 = q[29:31]
+    Q3 = q[32:35]
+    rf = r3 + rotate(Q3, lee-l_c3) # position of foot
+    ϕ[1] = rf[3] - 0.025  # subtract radius of foot
+    return ϕ
+end
+
+function Dϕ(q)
+    # dϕ = reshape(ForwardDiff.jacobian(dq->ϕ(dq),q), 1, 35)*Ḡ(q)  # 30x1
+    dϕ = ForwardDiff.jacobian(dq->ϕ(dq),q)*Ḡ(q)  # 30x1
+    return dϕ
+end
+
 function del(m, I, r1, r2, r3, Q1, Q2, Q3, grav)
     [(1/h)*m*(r2-r1) - (1/h)*m*(r3-r2) - m*grav*h;
      (2.0/h)*G(Q2)'*L(Q1)*H*I*H'*L(Q1)'*Q2 + (2.0/h)*G(Q2)'*T*R(Q3)'*H*I*H'*L(Q2)'*Q3]
 end
     
-function DEL(q_1,q_2,q_3,λ,F1,F2,grav,b)
+function DEL(q_1,q_2,q_3,λ,F1,F2,grav,b,n)
     
     rb_1 = q_1[1:3]
     Qb_1 = q_1[4:7]
@@ -84,12 +97,8 @@ function DEL(q_1,q_2,q_3,λ,F1,F2,grav,b)
     Fb = zeros(eltype(b), 30)
     Fb[25:26] = b  # should be last link's x and y translation terms
 
-    return del1 + (h/2.0)*F1 + (h/2.0)*F2 + reshape(h*Dc(q_2)'*λ, 30) + h*Fb
-end
-
-function Dq3DEL(q_1,q_2,q_3,λ,F1,F2,grav)
-    # @show Ḡ(q_3)
-    ForwardDiff.jacobian(dq->DEL(q_1,q_2,dq,λ,F1,F2,grav), q_3)*Ḡ(q_3)
+    return del1 + (h/2.0)*F1 + (h/2.0)*F2 + 
+        reshape(h*Dc(q_2)'*λ, 30) + reshape(h*Dϕ(q_2)'*n, 30) + h*Fb
 end
 
 #Objective and constraint functions for IPOPT
@@ -105,7 +114,8 @@ function constraint!(c,z)
     λ = z[n_q+1:n_q+n_c]
     s = z[n_q+n_c+1:n_q+n_c+n_s]
     b = z[n_q+n_c+n_s+1:n_q+n_c+n_s+n_b]
-    λf = z[n_q+n_c+n_s+n_b+1:end]
+    λf = z[n_q+n_c+n_s+n_b+1:n_q+n_c+n_s+n_b+n_λf]
+    n = z[n_q+n_c+n_s+n_b+n_λf+1:end]
 
     # nonlinear DEL equation                (30 equality constraint)   c1
     # quaternion norm squared - 1 = 0       (5 equality constraints)   c2-c6
@@ -119,24 +129,22 @@ function constraint!(c,z)
 
     μ = 0.5  # friction coefficient
     vm = (qn-qhist[:,k])/h
-    constraintfn = con(qn)
-    n = λ[n_c]  # normal force 1x1 (z axis only, assumes ground is flat)
 
     # equality constraints
-    c1 = DEL(qhist[:,k-1], qhist[:,k], qn, λ, F_prev, F, ghist[:, k], b)  # 30x1
+    c1 = DEL(qhist[:,k-1], qhist[:,k], qn, λ, F_prev, F, ghist[:, k], b, n)  # 30x1
     c2 = norm(qn[4:7])^2 - 1  # 1x1
     c3 = norm(qn[11:14])^2 - 1
     c4 = norm(qn[18:21])^2 - 1
     c5 = norm(qn[25:28])^2 - 1
     c6 = norm(qn[32:35])^2 - 1
-    c7 = constraintfn[1:n_c-n_c_ineq]
-    c8 = J(qn)[1:2, :]*vm + λf.*b/smoothsqrt(b'*b);  # maximum dissipation
+    c7 = con(qn)
+    c8 = J(qn)[1:2, :]*vm + λf.*b/smoothsqrt(b'*b)  # maximum dissipation
     
     # inequality constraints
     # c9 = constraintfn[n_c]  # signed distance
-    c10 = s[1] - λ[n_c]*constraintfn[n_c]  # relaxed complementarity (signed dist) 1x1
-    c11 = μ*n - smoothsqrt(b'*b); # friction cone
-    c12 = s[2] .- λf*(μ*n - smoothsqrt(b'*b)) # relaxed complementarity (friction)
+    c10 = s[1] .- n.*ϕ(qn)  # relaxed complementarity (signed dist) 1x1
+    c11 = μ*n .- smoothsqrt(b'*b) # friction cone
+    c12 = s[2] .- λf.*(μ*n .- smoothsqrt(b'*b)) # relaxed complementarity (friction)
     c .= [c1; c2; c3; c4; c5; c6; c7; c8; c10; c11; c12]
 
     return nothing
@@ -148,8 +156,9 @@ function primal_bounds(n)
     x_l = -Inf*ones(n)  # 60
     x_l[n_q+n_c] = 0  # normal force corresponding to signed dist constr
     x_l[n_q+n_c+1:n_q+n_c+n_s] = zeros(n_s)  # slack variables
-    x_l[n_q+n_c+n_s+n_b+1:end] = zeros(n_λf)  # λf is an unsigned magnitude?
-    
+    x_l[n_q+n_c+n_s+n_b+1:n_q+n_c+n_s+n_b+n_λf] = zeros(n_λf)  # λf is an unsigned magnitude?
+    x_l[n_q+n_c+n_s+n_b+n_λf+1:end] = zeros(n_n)  # normal force cannot be into ground
+
     x_u = Inf*ones(n)
 
     return x_l, x_u
@@ -160,28 +169,27 @@ function constraint_check(z, n_tol)
     λ = z[n_q+1:n_q+n_c]
     s = z[n_q+n_c+1:n_q+n_c+n_s]
     b = z[n_q+n_c+n_s+1:n_q+n_c+n_s+n_b]
-    λf = z[n_q+n_c+n_s+n_b+1:end]
+    λf = z[n_q+n_c+n_s+n_b+1:n_q+n_c+n_s+n_b+n_λf]
+    n = z[n_q+n_c+n_s+n_b+n_λf+1:end]
 
     μ = 0.5  # friction coefficient
     vm = (qn-qhist[:,k])/h
-    constraintfn = con(qn)
-    n = λ[n_c]  # normal force 1x1 (z axis only, assumes ground is flat)
 
     # equality constraints
-    c1 = DEL(qhist[:,k-1], qhist[:,k], qn, λ, F_prev, F, ghist[:, k], b)  # 30x1
+    c1 = DEL(qhist[:,k-1], qhist[:,k], qn, λ, F_prev, F, ghist[:, k], b, n)  # 30x1
     c2 = norm(qn[4:7])^2 - 1  # 1x1
     c3 = norm(qn[11:14])^2 - 1
     c4 = norm(qn[18:21])^2 - 1
     c5 = norm(qn[25:28])^2 - 1
     c6 = norm(qn[32:35])^2 - 1
-    c7 = constraintfn[1:n_c-n_c_ineq]
-    c8 = J(qn)[1:2, :]*vm + λf.*b/smoothsqrt(b'*b);  # maximum dissipation
+    c7 = con(qn)
+    c8 = J(qn)[1:2, :]*vm + λf.*b/smoothsqrt(b'*b)  # maximum dissipation
     
     # inequality constraints
     # c9 = constraintfn[n_c]  # signed distance
-    c10 = s[1] - λ[n_c]*constraintfn[n_c]  # 1x1
-    c11 = μ*n - smoothsqrt(b'*b); # friction cone
-    c12 = s[2] .- λf*(μ*n - smoothsqrt(b'*b)) # relaxed complementarity (friction)
+    c10 = s[1] .- n.*ϕ(qn)  # relaxed complementarity (signed dist) 1x1
+    c11 = μ*n .- smoothsqrt(b'*b) # friction cone
+    c12 = s[2] .- λf.*(μ*n .- smoothsqrt(b'*b)) # relaxed complementarity (friction)
     
     A = [c1; c2; c3; c4; c5; c6; c7; c8]
     B = [c10; c11; c12]

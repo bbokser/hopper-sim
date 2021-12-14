@@ -124,7 +124,7 @@ function constraint!(c,z)
     c5 = norm(qn[25:28])^2 - 1
     c6 = norm(qn[32:35])^2 - 1
     c7 = con(qn)[1:n_c-1]
-    
+    # @show size([c1; c2; c3; c4; c5; c6; c7])
     # inequality constraints
     c8 = ϕ  # signed distance
     c9 = s - n*ϕ  # relaxed complementarity (signed dist) 1x1

@@ -104,8 +104,8 @@ for kk = 2:(N-1)
     if k <= 3  # enforce no input for first two timesteps
         global F = u_f([0.0; 0.0], q_0)  
     else
-        global F = u_f([0.0; 1.0e-2], qhist[:, k])
-        # global F = a_control(a_target, a, a_vel(a, a_prev, h), qhist[:, k])
+        # global F = u_f([0.0; 1.0e-2], qhist[:, k])
+        global F = a_control(a_target, a, a_vel(a, a_prev, h), qhist[:, k])
     end
 
     z_guess = [qhist[:,k]; zeros(n_c); ones(n_s)]
@@ -116,12 +116,12 @@ for kk = 2:(N-1)
 
     global F_prev = copy(F)
     Fhist[:, k] = F
-    e = constraint_check(z_sol, 1e-3)  # print("\n", e, "\n")
+    # e = constraint_check(z_sol, 1e-3)  # print("\n", e, "\n")
     # if e == true; break; end
     print("Simulation ", round(kk/(N-1)*100, digits=3), " % complete \n")
     # flush(stdout)
     
-    # if kk/(N-1)*100 > 8; break; end
+    if kk/(N-1)*100 > 31; break; end
     
 end
 
@@ -160,7 +160,7 @@ thyme = collect(thist)
 if plot == true
     ph = pl.plot(thist,signed_d(), title="signed dist from foot to ground plane")
     pbz = pl.plot(thist,qhist[3,:], title="height of body")
-    plam = pl.plot(λhist[n_c,:],title="contact force")
+    plam = pl.plot(λhist[n_c,:],title="contact force")  # ylims = (0,20))
     pslack = pl.plot(thyme[1:N-1], shist',title="slackvar")
     panbt = pl.plot(thist, angle_y_look().*180/pi,title="angle_y b/t 0 and 1")
     pF0 = pl.plot(thist, Fhist[11, :],title="torque acting on link0")

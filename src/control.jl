@@ -16,9 +16,6 @@ function u_f(u, q)
     fb = f_applied(τb, l_cb)  # force in body frame
     f0 = f_applied(τ0, l_c0)
     f2 = f_applied(τ2, l_c2)
-    #@show (L(Qb)*R(Qb)'*H*fb)[2:4]
-    #@show (L(Q0)*R(Q0)'*H*f0)[2:4]
-    #@show (L(Q2)*R(Q2)'*H*f2)[2:4]
     #Corresponding wrench "F" for each link
     Fk = [(L(Qb)*R(Qb)'*H*fb)[2:4]; τb;        # body  
           (L(Q0)*R(Q0)'*H*f0)[2:4]; τ0;        # link0
@@ -36,7 +33,7 @@ end
 function a_control(a_target, a_pos, a_vel, q)
     # a_target: joint angle target
     # a_pos: joint angles
-    kp = 0.0001
+    kp = 0.1
     kd = copy(kp)*0.02
     # print("a_pos = ", a_pos.*180/pi, "\n")
     u = kp*(a_pos-a_target) + kd*(a_vel)

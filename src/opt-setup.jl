@@ -110,7 +110,7 @@ MOI.initialize(prob::MOI.AbstractNLPEvaluator, features) = nothing
 MOI.jacobian_structure(prob::MOI.AbstractNLPEvaluator) = prob.sparsity_jac
 
 function ipopt_solve(x0,prob::MOI.AbstractNLPEvaluator;
-    tol=1.0e-6,c_tol=1.0e-6,max_iter=10000, print=0)
+    tol=1.0e-3,c_tol=1.0e-3,max_iter=10000, print=0)
     x_l, x_u = prob.primal_bounds
     c_l, c_u = prob.constraint_bounds
 

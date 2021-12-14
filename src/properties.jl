@@ -57,3 +57,26 @@ M̄ = [mb*I(3) zeros(3, 27);
     zeros(3, 21) I2 zeros(3, 6);
     zeros(3, 24) m3*I(3) zeros(3, 3);
     zeros(3, 27) I3]
+
+# Kinematics
+function kin_ee(q)
+    # forward kinematics of the end effector
+    rb = q[1:3]
+    Qb = q[4:7]
+    r3 = q[29:31]
+    Q2 = q[25:28]
+    Q3 = q[32:35]
+    
+    # not the most efficient way, but will have to do for now
+    #pb = rb + rotate(Qb, l_cb)  # position vector from world frame to *JOINTS* 0 and 2
+    #ree = pb + rotate(Q2, l2) + rotate(Q3, lee)  
+    ree = r3 + rotate(Q3, lee-l_c3) # TODO: this is probably better, try
+
+    return ree  # 3x1
+end
+
+function J(q)
+    # ree = kin_ee(q_min);
+    jac = ForwardDiff.jacobian(dq->kin_ee(dq), q)  # 3x35
+    return jac
+end

@@ -48,7 +48,8 @@ end
 
 function rotate(Q, p)
     # Rotate a position vector p by a quaternion Q
-    return H'L(Q)*R(Q)'*H*p
+    # H'L(Q)*R(Q)'*H*p
+    return H'*R(Q)'*L(Q)*H*p
 end
 
 function anglesolve(Q)
@@ -87,18 +88,26 @@ function a_joint(q)
 
 end
 
+function a_act(q)
+    # convert quaternions to relative joint angles b/t links
+    # only actuated joints
+    Qb = q[4:7]
+    Q0 = q[11:14]
+    Q2 = q[25:28]
+    
+    a0 = -angle_y(Qb, Q0)
+    a2 = -angle_y(Qb, Q2)
+
+    return [a0; a2]
+
+end
+
 function a_vel(a, a_prev, dt)
     # get joint velocities from current and previous joint angle
     return (a .- a_prev)/dt
 end
-#=
-function a_urdf(a)
-    # adjust angles for urdf animation
-    a0 = a[1] +30*(pi/180)
-    a1 = a[2] +120*(pi/180)
-    a2 = a[3] +150*(pi/180)
-    a3 = a[4] -120*(pi/180)
-    
-    return [a0, a2, a1, a3]
+
+function smoothsqrt(x)
+    ϵ = 1e-6
+    return sqrt(x+ϵ*ϵ) - ϵ
 end
-=#

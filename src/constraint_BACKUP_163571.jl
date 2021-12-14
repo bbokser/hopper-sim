@@ -27,10 +27,15 @@ function con(q)
     c_[16:18] = r2 + rotate(Q2, l2 - l_c2) - r3 - rotate(Q3, -l_c3)
     c_[19:20] = [0 1 0 0; 0 0 0 1]*L(Q2)'*Q3 
     c_[21:23] = r1 + rotate(Q1, l1 - l_c1) - r3 - rotate(Q3, lc-l_c3)
+<<<<<<< HEAD
+    #c_[24] = (pi-angle_y(Q0, Q1)) - 18*pi/180  # constrain relative angle between links 0 and 1
+    #c_[25] = 166*pi/180 - (pi-angle_y(Q0, Q1))
+=======
     # Constrain base so that it can only move in z-axis
     #c_[24] = rb[1]  # constrain base x axis
     #c_[25] = rb[2]  # constrain base y axis
     # Prevent foot-floor interpenetration
+>>>>>>> simplified
     c_[24] = rf[3] - 0.025  # subtract radius of foot
     return c_
 end
@@ -123,12 +128,19 @@ function constraint!(c,z)
     c4 = norm(qn[18:21])^2 - 1
     c5 = norm(qn[25:28])^2 - 1
     c6 = norm(qn[32:35])^2 - 1
+<<<<<<< HEAD
+    c7 = con(qn)  # 26x1
+    # c8 = s .- Diagonal(λ[n_c-n_s+1:n_c])*con(qn)[n_c-n_s+1:n_c]  # 3x1
+    c8 = s - λ[n_c]*con(qn)[n_c]  # 1x1
+    c .= [c1; c2; c3; c4; c5; c6; c7; c8]
+=======
     c7 = con(qn)[1:n_c-1]
     # @show size([c1; c2; c3; c4; c5; c6; c7])
     # inequality constraints
     c8 = ϕ  # signed distance
     c9 = s - n*ϕ  # relaxed complementarity (signed dist) 1x1
     c .= [c1; c2; c3; c4; c5; c6; c7; c8; c9]
+>>>>>>> simplified
 
     return nothing
 end
@@ -160,6 +172,14 @@ function constraint_check(z, n_tol)
     c4 = norm(qn[18:21])^2 - 1
     c5 = norm(qn[25:28])^2 - 1
     c6 = norm(qn[32:35])^2 - 1
+<<<<<<< HEAD
+    c7 = con(qn)  # 24x1
+    # c8 = s - Diagonal(λ[n_c-n_s+1:n_c])*con(qn)[n_c-n_s+1:n_c] # 1x1
+    c8 = s - λ[n_c]*con(qn)[n_c]  # 1x1
+    A = [c1; c2; c3; c4; c5; c6; c7[1:n_c-n_c_ineq]]  # 23
+    B = [c7[n_c-n_c_ineq+1:n_c]; c8]  #24
+    if !isapprox(A, zeros(size(A)[1]); atol=n_tol, rtol=0)  # 58
+=======
     c7 = con(qn)[1:n_c-1]
     
     # inequality constraints
@@ -170,6 +190,7 @@ function constraint_check(z, n_tol)
     B = [c8; c9]
 
     if !isapprox(A, zeros(size(A)[1]); atol=n_tol) # , rtol=0)  # 58
+>>>>>>> simplified
         e = 1
         #print("\n", A, "\n")
         print("\n A \n")

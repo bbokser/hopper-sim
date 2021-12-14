@@ -1,7 +1,7 @@
 function con(q)
     # joint constraint function
     # c(q_0) should be all zeros
-    c_ = zeros(eltype(q), 24)
+    c_ = zeros(eltype(q), 26)
     
     rb = q[1:3]
     Qb = q[4:7]
@@ -17,7 +17,7 @@ function con(q)
     rf = r3 + rotate(Q3, lee-l_c3) # position of foot
 
     pb = rb + rotate(Qb, l_cb) # position vector from world frame to *JOINTS* 0 and 2
-    # 
+    
     c_[1:3] = pb - r0 - rotate(Q0, -l_c0)
     c_[4:5] = [0 1 0 0; 0 0 0 1]*L(Qb)'*Q0  # y axis rotation constraint: set x & z = 0
     c_[6:8] = r0 + rotate(Q0,  l0-l_c0) - r1 - rotate(Q1, -l_c1)
@@ -27,11 +27,9 @@ function con(q)
     c_[16:18] = r2 + rotate(Q2, l2 - l_c2) - r3 - rotate(Q3, -l_c3)
     c_[19:20] = [0 1 0 0; 0 0 0 1]*L(Q2)'*Q3 
     c_[21:23] = r1 + rotate(Q1, l1 - l_c1) - r3 - rotate(Q3, lc-l_c3)
-    # Constrain base so that it can only move in z-axis
-    #c_[24] = rb[1]  # constrain base x axis
-    #c_[25] = rb[2]  # constrain base y axis
-    # Prevent foot-floor interpenetration
-    c_[24] = rf[3] - 0.025  # subtract radius of foot
+    c_[24] = (pi-angle_y(Q0, Q1)) - 18*pi/180  # constrain relative angle between links 0 and 1
+    c_[25] = 166*pi/180 - (pi-angle_y(Q0, Q1))
+    c_[26] = rf[3] - 0.025  # subtract radius of foot
     return c_
 end
 
@@ -84,51 +82,46 @@ function DEL(q_1,q_2,q_3,λ,F1,F2,grav)
             del(m1, I1, r1_1, r1_2, r1_3, Q1_1, Q1_2, Q1_3, grav);
             del(m2, I2, r2_1, r2_2, r2_3, Q2_1, Q2_2, Q2_3, grav);
             del(m3, I3, r3_1, r3_2, r3_3, Q3_1, Q3_2, Q3_3, grav)] 
-    #if F1[5] != F2[5]
-    #        print(F1[5], ", ", F2[5], "\n")
-    #end
+
     return del1 + (h/2.0)*F1 + (h/2.0)*F2 + reshape(h*Dc(q_2)'*λ, 30)
+end
+
+function Dq3DEL(q_1,q_2,q_3,λ,F1,F2,grav)
+    # @show Ḡ(q_3)
+    ForwardDiff.jacobian(dq->DEL(q_1,q_2,dq,λ,F1,F2,grav), q_3)*Ḡ(q_3)
 end
 
 #Objective and constraint functions for IPOPT
 
 function objective(z)
+    qn = z[1:n_q]
+    λ = z[n_q+1:n_q+n_c]
     s = z[n_q+n_c+1:n_q+n_c+n_s]
-    λj = z[n_q+1:n_q+n_c-1]
-    α = 1e-3
-    # regularizer (Tikhonov)
-    return α*λj'*λj + sum(s) #Minimize slacks associated with complementarity conditions
-    # return sum(s)
+    
+    return sum(s) #Minimize slacks associated with complementarity conditions
 end
 
 function constraint!(c,z)
     qn = z[1:n_q]
     λ = z[n_q+1:n_q+n_c]
-    s = z[n_q+n_c+1]
+    s = z[n_q+n_c+1:n_q+n_c+n_s]
 
     # nonlinear DEL equation                (30 equality constraint)   c1
     # quaternion norm squared - 1 = 0       (5 equality constraints)   c2-c6
     # joint constraints                     (23 equality constraints)  c7
-    
-    # signed distance of foot from ground   (1 inequality constraint)  c8
-    # collision complementarity foot        (1 inequality constraint)  c9
+    # relative angle between l0 and l1      (2 inequality constraints)  c7
+    # foot height must stay above ground    (1 inequality constraint)  c7
+    # collision constraint                  (1 inequality constraint)  c8
 
-    ϕ = con(qn)[n_c]
-    n = λ[n_c]  # normal force 1x1 (z axis only, assumes ground is flat)
-
-    # equality constraints
     c1 = DEL(qhist[:,k-1], qhist[:,k], qn, λ, F_prev, F, ghist[:, k])  # 30x1
     c2 = norm(qn[4:7])^2 - 1  # 1x1
     c3 = norm(qn[11:14])^2 - 1
     c4 = norm(qn[18:21])^2 - 1
     c5 = norm(qn[25:28])^2 - 1
     c6 = norm(qn[32:35])^2 - 1
-    c7 = con(qn)[1:n_c-1]
-    # @show size([c1; c2; c3; c4; c5; c6; c7])
-    # inequality constraints
-    c8 = ϕ  # signed distance
-    c9 = s - n*ϕ  # relaxed complementarity (signed dist) 1x1
-    c .= [c1; c2; c3; c4; c5; c6; c7; c8; c9]
+    c7 = con(qn)  # 26x1
+    c8 = s .- Diagonal(λ[n_c-n_s+1:n_c])*con(qn)[n_c-n_s+1:n_c]  # 1x1
+    c .= [c1; c2; c3; c4; c5; c6; c7; c8]
 
     return nothing
 end
@@ -136,11 +129,14 @@ end
 function primal_bounds(n)
     #Enforce simple bound constraints on the decision variables (e.g. positivity) here
     # x_l ≤ [q; λ; s] ≤ x_u
-    x_l = -Inf*ones(n)  # 60
-    # x_l[n_q+n_c] = 0  # normal force corresponding to signed dist constr
-    x_l[n_q+n_c+1] = 0  # slack variable
+
+    x_l = zeros(n)  # 60
+    x_l[1:n_q+n_c-1] = -Inf*ones(n_q+n_c-1)  # 35 + 24 - 1
     
     x_u = Inf*ones(n)
+
+    x_l[24] = 0
+    x_l[25] = 0
 
     return x_l, x_u
 end
@@ -148,46 +144,28 @@ end
 function constraint_check(z, n_tol)
     qn = z[1:n_q]
     λ = z[n_q+1:n_q+n_c]
-    s = z[n_q+n_c+1]
+    s = z[n_q+n_c+1:n_q+n_c+n_s]
 
-    ϕ = con(qn)[n_c]
-    n = λ[n_c]  # normal force 1x1 (z axis only, assumes ground is flat)
-
-    # equality constraints
     c1 = DEL(qhist[:,k-1], qhist[:,k], qn, λ, F_prev, F, ghist[:, k])  # 30x1
     c2 = norm(qn[4:7])^2 - 1  # 1x1
     c3 = norm(qn[11:14])^2 - 1
     c4 = norm(qn[18:21])^2 - 1
     c5 = norm(qn[25:28])^2 - 1
     c6 = norm(qn[32:35])^2 - 1
-    c7 = con(qn)[1:n_c-1]
-    
-    # inequality constraints
-    c8 = ϕ  # signed distance
-    c9 = s - n*ϕ  # relaxed complementarity (signed dist) 1x1
-    
-    A = [c1; c2; c3; c4; c5; c6; c7]
-    B = [c8; c9]
-
-    if !isapprox(A, zeros(size(A)[1]); atol=n_tol) # , rtol=0)  # 58
+    c7 = con(qn)  # 24x1
+    c8 = s - Diagonal(λ[n_c-n_s+1:n_c])*con(qn)[n_c-n_s+1:n_c] # 1x1
+    A = [c1; c2; c3; c4; c5; c6; c7[1:n_c-n_c_ineq]]  # 23
+    B = [c7[n_c-n_c_ineq+1:n_c]; c8]  #24
+    if !isapprox(A, zeros(size(A)[1]); atol=n_tol, rtol=0)  # 58
         e = 1
         #print("\n", A, "\n")
-        print("\n A \n")
         print(findall(A .< -ones(size(A)[1])*n_tol), " is less than 0 \n")
         print(findall(A .> ones(size(A)[1])*n_tol), " is greater than 0 \n")
-        print("\n Sim stopped due to ipopt infeasibility \n")
+        
     elseif B < -ones(size(B)[1])*n_tol  #25
         e = 1
         #print("\n", B, "\n")
-        print("\n B \n")
         print(findall(B .< -ones(size(B)[1])*n_tol))  # 25
-        print("\n Sim stopped due to ipopt infeasibility \n")
-    elseif (pi-angle_y(Q0, Q1)) < 18*pi/180  # constrain relative angle between links 0 and 1
-        e = 1
-        print("RoM lower limit surpassed")
-    elseif 166*pi/180 < (pi-angle_y(Q0, Q1))
-        e = 1
-        print("RoM upper limit surpassed")
     else
         e = 0
     end

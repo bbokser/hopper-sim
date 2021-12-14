@@ -1,32 +1,47 @@
-function u_f(u)
+# Control functions
+
+function u_f(u, q)
     # convert torque input to wrench
-    # u[1] -> joint0
-    # u[2] -> joint1
-    # u[3] -> joint2
-    # u[4] -> joint3
-    # u[5] -> joint4 (parallel constraint)
+    Qb = q[4:7]
+    Q0 = q[11:14]
+    Q2 = q[25:28]
 
-    u5 = 0  # we're not outputting torque there anyway
+    u0 = u[1]  # joint0
+    u2 = u[2]  # joint2
 
+    τb = [0; -u0-u2; 0]
+    τ0 = [0; u0;     0]
+    τ2 = [0; u2;     0]
+
+    fb = f_applied(τb, l_cb)  # force in body frame
+    f0 = f_applied(τ0, l_c0)
+    f2 = f_applied(τ2, l_c2)
+    #@show (L(Qb)*R(Qb)'*H*fb)[2:4]
+    #@show (L(Q0)*R(Q0)'*H*f0)[2:4]
+    #@show (L(Q2)*R(Q2)'*H*f2)[2:4]
     #Corresponding wrench "F" for each link
-    Fk = [zeros(4); -u[1]-u[3]; 0; # body
-          zeros(4); u[1]-u[2]; 0; # link0
-          zeros(4); u[2]+u5; 0; # link1
-          zeros(4); u[3]-u[4]; 0; # link2
-          zeros(4); u[4]-u5; 0] # link3
+    Fk = [(L(Qb)*R(Qb)'*H*fb)[2:4]; τb;        # body  
+          (L(Q0)*R(Q0)'*H*f0)[2:4]; τ0;        # link0
+          zeros(3);                 zeros(3);  # link1
+          (L(Q2)*R(Q2)'*H*f2)[2:4]; τ2;        # link2
+          zeros(3);                 zeros(3)]  # link3
 
     return Fk
 end
 
-function a_control(a_target, a_pos, a_vel)
+function f_applied(τ, r)
+    cross(τ, r)/(norm(r)^2)
+end
+
+function a_control(a_target, a_pos, a_vel, q)
     # a_target: joint angle target
     # a_pos: joint angles
     kp = 0.0001
     kd = copy(kp)*0.02
-    print("a_pos = ", a_pos.*180/pi, "\n")
+    # print("a_pos = ", a_pos.*180/pi, "\n")
     u = kp*(a_pos-a_target) + kd*(a_vel)
-    B = Diagonal([1; 0; 1; 0])  # actuator selection matrix
-    Fk = u_f(B*u)  # convert torque input to wrench
+    # B = Diagonal([1; 0; 1; 0])  # actuator selection matrix
+    Fk = u_f(u, q)  # convert torque input to wrench
     return Fk
 end
 

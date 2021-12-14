@@ -23,10 +23,10 @@ q0 = 30*pi/180;
 q1 = 120*(pi/180)
 q2 = 150*(pi/180)
 q3 = -120*(pi/180)
-a_target = [q0; q1; q2; q3]
+a_target = [q0; q2]
 
 Tf = 1
-h = 0.01
+h = 0.01  # 0.01
 thist = 0:h:Tf
 N = length(thist)
 
@@ -88,8 +88,8 @@ qhist[:,2] .= q_0  # this may need to be fixed
 λhist = zeros(n_c,N-1)
 shist = zeros(n_s,N-1)
 
-global F = u_f([0 0 0 0 0])
-global F_prev = u_f([0 0 0 0 0])
+global F = u_f([0.0; 0.0], q_0)
+global F_prev = u_f([0.0; 0.0], q_0)
 Fhist = zeros(30, N)
 
 global k = 0
@@ -98,30 +98,30 @@ for kk = 2:(N-1)
     
     global k = kk
 
-    a = a_joint(qhist[:, k])
-    a_prev = a_joint(qhist[:, k-1])
+    a = a_act(qhist[:, k])
+    a_prev = a_act(qhist[:, k-1])
 
     if k <= 3  # enforce no input for first two timesteps
-        global F = u_f([0 0 0 0 0])  
+        global F = u_f([0.0; 0.0], q_0)  
     else
-        global F = u_f([0 0 1 0 0])*1e-3
-        # global F = a_control(a_target, a, a_vel(a, a_prev, h))
+        global F = u_f([0.0; 1.0e-2], qhist[:, k])
+        # global F = a_control(a_target, a, a_vel(a, a_prev, h), qhist[:, k])
     end
 
     z_guess = [qhist[:,k]; zeros(n_c); ones(n_s)]
-    z_sol = ipopt_solve(z_guess, nlp_prob, max_iter=1000, print=0);
+    z_sol = ipopt_solve(z_guess, nlp_prob, tol=1.0e-3,c_tol=1.0e-3, max_iter=1000, print=2);
     qhist[:,k+1] .= z_sol[1:n_q]
     λhist[:,k] .= z_sol[n_q + 1:n_q + n_c]
     shist[:,k] .= z_sol[n_q + n_c + 1:n_q + n_c + n_s]
 
     global F_prev = copy(F)
     Fhist[:, k] = F
-    e = constraint_check(z_sol, 1e-6)  # print("\n", e, "\n")
-    if e == true; break; end
+    e = constraint_check(z_sol, 1e-3)  # print("\n", e, "\n")
+    # if e == true; break; end
     print("Simulation ", round(kk/(N-1)*100, digits=3), " % complete \n")
     # flush(stdout)
     
-    # if kk/(N-1)*100 > 5; break; end
+    # if kk/(N-1)*100 > 8; break; end
     
 end
 
@@ -142,27 +142,29 @@ function angle_look()
         Q1 = qhist[18:21, i]
         an[i] = pi - anglesolve(L(Q0)'*Q1)
     end
-    return anB = Diagonal([1; 0; 1; 0])  # actuator selection matrix
+    return an
+end
+
+function angle_y_look()
     an = zeros(N)
     for i in 1:(N-1)
         Q0 = qhist[11:14, i]
         Q1 = qhist[18:21, i]
-        an[i] = angle_y(Q0, Q1)
+        an[i] = pi - angle_y(Q0, Q1)
     end
     return an
 end
 
 plot = true
-
+thyme = collect(thist)
 if plot == true
     ph = pl.plot(thist,signed_d(), title="signed dist from foot to ground plane")
     pbz = pl.plot(thist,qhist[3,:], title="height of body")
     plam = pl.plot(λhist[n_c,:],title="contact force")
-    pslack = pl.plot(shist,title="slackvar")
+    pslack = pl.plot(thyme[1:N-1], shist',title="slackvar")
     panbt = pl.plot(thist, angle_y_look().*180/pi,title="angle_y b/t 0 and 1")
     pF0 = pl.plot(thist, Fhist[11, :],title="torque acting on link0")
     pF1 = pl.plot(thist, Fhist[23, :],title="torque acting on link2")
-    pl.display(ph)
     pl.display(ph)
     pl.display(pbz)
     pl.display(plam)
@@ -172,7 +174,7 @@ if plot == true
     pl.display(pF1)
 end
 
-urdf = true  # for now manually change this
+urdf = false  # for now manually change this
 
 if urdf == false
     anim_init = geom_init
@@ -185,7 +187,7 @@ end
 mvis = anim_init()
 print("\n Visualization starting in 5 seconds \n")
 sleep(5)
-for j in 1:2
+for j in 1:4
     print("\n Visualization starting now, replay #", j, "\n")
     anim(mvis, qhist)
 end

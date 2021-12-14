@@ -1,7 +1,7 @@
 function con(q)
     # joint constraint function
     # c(q_0) should be all zeros
-    c_ = zeros(eltype(q), 26)
+    c_ = zeros(eltype(q), 24)
     
     rb = q[1:3]
     Qb = q[4:7]
@@ -17,7 +17,7 @@ function con(q)
     rf = r3 + rotate(Q3, lee-l_c3) # position of foot
 
     pb = rb + rotate(Qb, l_cb) # position vector from world frame to *JOINTS* 0 and 2
-    
+    # 
     c_[1:3] = pb - r0 - rotate(Q0, -l_c0)
     c_[4:5] = [0 1 0 0; 0 0 0 1]*L(Qb)'*Q0  # y axis rotation constraint: set x & z = 0
     c_[6:8] = r0 + rotate(Q0,  l0-l_c0) - r1 - rotate(Q1, -l_c1)
@@ -28,10 +28,10 @@ function con(q)
     c_[19:20] = [0 1 0 0; 0 0 0 1]*L(Q2)'*Q3 
     c_[21:23] = r1 + rotate(Q1, l1 - l_c1) - r3 - rotate(Q3, lc-l_c3)
     # Constrain base so that it can only move in z-axis
-    c_[24] = rb[1]  # constrain base x axis
-    c_[25] = rb[2]  # constrain base y axis
+    #c_[24] = rb[1]  # constrain base x axis
+    #c_[25] = rb[2]  # constrain base y axis
     # Prevent foot-floor interpenetration
-    c_[26] = rf[3] - 0.025  # subtract radius of foot
+    c_[24] = rf[3] - 0.025  # subtract radius of foot
     return c_
 end
 
@@ -90,17 +90,15 @@ function DEL(q_1,q_2,q_3,λ,F1,F2,grav)
     return del1 + (h/2.0)*F1 + (h/2.0)*F2 + reshape(h*Dc(q_2)'*λ, 30)
 end
 
-function Dq3DEL(q_1,q_2,q_3,λ,F1,F2,grav)
-    # @show Ḡ(q_3)
-    ForwardDiff.jacobian(dq->DEL(q_1,q_2,dq,λ,F1,F2,grav), q_3)*Ḡ(q_3)
-end
-
 #Objective and constraint functions for IPOPT
 
 function objective(z)
     s = z[n_q+n_c+1:n_q+n_c+n_s]
-    
-    return sum(s) #Minimize slacks associated with complementarity conditions
+    λj = z[n_q+1:n_q+n_c-1]
+    α = 1e-3
+    # regularizer (Tikhonov)
+    return α*λj'*λj + sum(s) #Minimize slacks associated with complementarity conditions
+    # return sum(s)
 end
 
 function constraint!(c,z)
@@ -130,7 +128,6 @@ function constraint!(c,z)
     # inequality constraints
     c8 = ϕ  # signed distance
     c9 = s - n*ϕ  # relaxed complementarity (signed dist) 1x1
-
     c .= [c1; c2; c3; c4; c5; c6; c7; c8; c9]
 
     return nothing
@@ -140,7 +137,7 @@ function primal_bounds(n)
     #Enforce simple bound constraints on the decision variables (e.g. positivity) here
     # x_l ≤ [q; λ; s] ≤ x_u
     x_l = -Inf*ones(n)  # 60
-    x_l[n_q+n_c] = 0  # normal force corresponding to signed dist constr
+    # x_l[n_q+n_c] = 0  # normal force corresponding to signed dist constr
     x_l[n_q+n_c+1] = 0  # slack variable
     
     x_u = Inf*ones(n)
@@ -175,12 +172,14 @@ function constraint_check(z, n_tol)
     if !isapprox(A, zeros(size(A)[1]); atol=n_tol) # , rtol=0)  # 58
         e = 1
         #print("\n", A, "\n")
+        print("\n A \n")
         print(findall(A .< -ones(size(A)[1])*n_tol), " is less than 0 \n")
         print(findall(A .> ones(size(A)[1])*n_tol), " is greater than 0 \n")
         print("\n Sim stopped due to ipopt infeasibility \n")
     elseif B < -ones(size(B)[1])*n_tol  #25
         e = 1
         #print("\n", B, "\n")
+        print("\n B \n")
         print(findall(B .< -ones(size(B)[1])*n_tol))  # 25
         print("\n Sim stopped due to ipopt infeasibility \n")
     elseif (pi-angle_y(Q0, Q1)) < 18*pi/180  # constrain relative angle between links 0 and 1

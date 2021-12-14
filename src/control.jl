@@ -16,6 +16,7 @@ function u_f(u, q)
     fb = f_applied(τb, l_cb)  # force in body frame
     f0 = f_applied(τ0, l_c0)
     f2 = f_applied(τ2, l_c2)
+
     #Corresponding wrench "F" for each link
     Fk = [(L(Qb)*R(Qb)'*H*fb)[2:4]; τb;        # body  
           (L(Q0)*R(Q0)'*H*f0)[2:4]; τ0;        # link0

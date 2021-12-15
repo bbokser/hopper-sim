@@ -57,7 +57,7 @@ Q3 .= Q3/norm(Q3)
 q_0 = [rb; Qb; r0; Q0; r1; Q1; r2; Q2; r3; Q3]  # initial state
 
 # make gravity zero for first two timesteps
-ghist = repeat([0 0 0], N)'
+ghist = repeat([0 0 g], N)'
 ghist[:, 1] = [0 0 0]
 ghist[:, 2] = [0 0 0]
 
@@ -114,7 +114,7 @@ for kk = 2:(N-1)
     end
 
     z_guess = [qhist[:,k]; zeros(n_c); ones(n_s); zeros(n_b); ones(n_b); zeros(n_n)]
-    z_sol = ipopt_solve(z_guess, nlp_prob, tol=1.0e-3,c_tol=1.0e-3, max_iter=1000, print=3);
+    z_sol = ipopt_solve(z_guess, nlp_prob, tol=1.0e-3,c_tol=1.0e-3, max_iter=2000, print=2);
     qhist[:,k+1] .= z_sol[1:n_q]
     λhist[:,k] .= z_sol[n_q + 1:n_q + n_c]
     shist[:,k] .= z_sol[n_q + n_c + 1:n_q + n_c + n_s]
@@ -129,7 +129,7 @@ for kk = 2:(N-1)
     print("Simulation ", round(kk/(N-1)*100, digits=3), " % complete \n")
     # flush(stdout)
     
-    # if kk/(N-1)*100 > 32; break; end
+    if kk/(N-1)*100 > 40; break; end
     
 end
 
@@ -163,7 +163,7 @@ function angle_y_look()
     return an
 end
 
-plot = true # for now manually change this
+plot = false # for now manually change this
 
 thyme = collect(thist)
 if plot == true

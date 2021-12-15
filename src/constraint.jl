@@ -119,7 +119,6 @@ function constraint!(c,z)
     b = z[n_q+n_c+n_s+1:n_q+n_c+n_s+n_b]
     λf = z[n_q+n_c+n_s+n_b+1:n_q+n_c+n_s+n_b+n_λf]
     n = z[n_q+n_c+n_s+n_b+n_λf+1:end]
-
     # nonlinear DEL equation                (30 equality constraint)   c1
     # quaternion norm squared - 1 = 0       (5 equality constraints)   c2-c6
     # joint constraints                     (23 equality constraints)  c7
@@ -141,8 +140,8 @@ function constraint!(c,z)
     c5 = norm(qn[25:28])^2 - 1
     c6 = norm(qn[32:35])^2 - 1
     c7 = con(qn)
-    c8 = Jac(qn)[1:2, :]*vm + λf.*b/smoothsqrt(b'*b)  # maximum dissipation
-    # c8 
+    # c8 = Jac(qn)[1:2, :]*vm + λf.*b/(smoothsqrt(b'*b)+1e-8)  # maximum dissipation
+    c8  = [0.; 0.]
     # inequality constraints
     c9 = ϕ(qn)  # signed distance
     c10 = s[1] .- n.*ϕ(qn)  # relaxed complementarity (signed dist) 1x1
@@ -163,6 +162,8 @@ function primal_bounds(n)
 
     x_u = Inf*ones(n)
 
+    # x_l[1:2] = zeros(2)
+    # x_u[1:2] = zeros(2)
     return x_l, x_u
 end
 

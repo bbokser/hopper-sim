@@ -1,3 +1,9 @@
+using MeshCat
+using GeometryBasics
+using CoordinateTransformations
+using Rotations
+import Plots as pl
+
 function geom_init()
     vis = Visualizer()
     render(vis)

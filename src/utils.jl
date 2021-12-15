@@ -109,5 +109,5 @@ end
 
 function smoothsqrt(x)
     ϵ = 1e-6
-    return sqrt(x+ϵ*ϵ) - ϵ
+    return sqrt(x.+ϵ*ϵ) .- ϵ
 end

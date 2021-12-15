@@ -34,8 +34,8 @@ end
 function a_control(a_target, a_pos, a_vel, q)
     # a_target: joint angle target
     # a_pos: joint angles
-    kp = 0.1
-    kd = copy(kp)*0.02
+    kp = 5
+    kd = copy(kp)*0.03
     # print("a_pos = ", a_pos.*180/pi, "\n")
     u = kp*(a_pos-a_target) + kd*(a_vel)
     # B = Diagonal([1; 0; 1; 0])  # actuator selection matrix

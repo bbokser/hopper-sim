@@ -71,10 +71,3 @@ function kin_ee_min(q_min)
 
     return ree
 end
-
-# End effector Jacobian
-function J_min(q_min)
-    # ree = kin_ee(q_min);
-    jac = ForwardDiff.jacobian(dq->kin_ee_min(dq), q_min)
-    return jac
-end

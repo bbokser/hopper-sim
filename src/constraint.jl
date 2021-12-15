@@ -141,8 +141,8 @@ function constraint!(c,z)
     c5 = norm(qn[25:28])^2 - 1
     c6 = norm(qn[32:35])^2 - 1
     c7 = con(qn)
-    c8 = [0; 0]
-    # c8 = J(qn)[1:2, :]*vm + λf.*b/smoothsqrt(b'*b)  # maximum dissipation
+    c8 = Jac(qn)[1:2, :]*vm + λf.*b/smoothsqrt(b'*b)  # maximum dissipation
+    # c8 
     # inequality constraints
     c9 = ϕ(qn)  # signed distance
     c10 = s[1] .- n.*ϕ(qn)  # relaxed complementarity (signed dist) 1x1
@@ -188,13 +188,13 @@ function constraint_check(z, n_tol)
     c8 = [0.0; 0.0]  # J(qn)[1:2, :]*vm + λf.*b/smoothsqrt(b'*b)  # maximum dissipation
     
     # inequality constraints
-    # c9 = constraintfn[n_c]  # signed distance
+    c9 = ϕ(qn)  # signed distance
     c10 = s[1] .- n.*ϕ(qn)  # relaxed complementarity (signed dist) 1x1
     c11 = μ*n .- smoothsqrt(b'*b) # friction cone
     c12 = s[2] .- λf.*(μ*n .- smoothsqrt(b'*b)) # relaxed complementarity (friction)
     
     A = [c1; c2; c3; c4; c5; c6; c7; c8]
-    B = [c10; c11; c12]
+    B = [c9; c10; c11; c12]
 
     if !isapprox(A, zeros(size(A)[1]); atol=n_tol, rtol=0)  # 58
         e = 1

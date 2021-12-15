@@ -60,23 +60,53 @@ M̄ = [mb*I(3) zeros(3, 27);
 
 # Kinematics
 function kin_ee(q)
-    # forward kinematics of the end effector
-    rb = q[1:3]
-    Qb = q[4:7]
+    # fast forward kinematics of the end effector
+    #rb = q[1:3]
+    #Qb = q[4:7]
     r3 = q[29:31]
-    Q2 = q[25:28]
+    #Q2 = q[25:28]
     Q3 = q[32:35]
-    
-    # not the most efficient way, but will have to do for now
     #pb = rb + rotate(Qb, l_cb)  # position vector from world frame to *JOINTS* 0 and 2
     #ree = pb + rotate(Q2, l2) + rotate(Q3, lee)  
-    ree = r3 + rotate(Q3, lee-l_c3) # this is probably better
-
-    return ree  # 3x1
+    return r3 + rotate(Q3, lee-l_c3)  # 3x1
 end
 
-function J(q)
-    # ree = kin_ee(q_min);
-    jac = ForwardDiff.jacobian(dq->kin_ee(dq), q)  # 3x35
+function kinematics(q)
+    # differentiable kinematics
+    # actuator-to-end-effector forward kinematics
+    
+    # end-to-end link length magnitudes
+    l_0 = 0.1
+    l_1 = 0.3
+    l_2 = 0.3
+    l_3 = 0.1
+    l_4 = 0.2
+    l_5 = 0.0205
+    
+    a = a_act(q)
+    q0 = a[1]
+    q2 = a[2]
+
+    d = 0
+    x0a = l_0 * cos(q0)
+    z0a = l_0 * sin(q0)
+    rho = sqrt((x0a + d) ^ 2 + z0a ^ 2)
+    x1a = l_2 * cos(q2)
+    z1a = l_2 * sin(q2)
+    h = sqrt((x0a - x1a)^2 + (z0a - z1a)^2)
+    mu = acos((l_3 ^ 2 + h ^ 2 - l_1 ^ 2) / (2 * l_3 * h))
+    eta = acos((h ^ 2 + l_2 ^ 2 - rho ^ 2) / (2 * h * l_2))
+    alpha = pi - (eta + mu) + q2
+    xa = l_2 * cos(q2) + (l_3 + l_4) * cos(alpha) - d + l_5 * cos(alpha - pi / 2)
+    ya = 0
+    za = l_2 * sin(q2) + (l_3 + l_4) * sin(alpha) + l_5 * cos(alpha - pi / 2)
+    fwd_kin = [xa; ya; za]
+
+    return fwd_kin
+end
+
+# End effector Jacobian
+function Jac(q)
+    jac = ForwardDiff.jacobian(dq->kinematics(dq), q)
     return jac
 end

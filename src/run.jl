@@ -114,7 +114,7 @@ for kk = 2:(N-1)
     end
 
     z_guess = [qhist[:,k]; zeros(n_c); ones(n_s); zeros(n_b); ones(n_b); zeros(n_n)]
-    z_sol = ipopt_solve(z_guess, nlp_prob, tol=1.0e-3,c_tol=1.0e-3, max_iter=1000, print=2);
+    z_sol = ipopt_solve(z_guess, nlp_prob, tol=1.0e-3,c_tol=1.0e-3, max_iter=1000, print=3);
     qhist[:,k+1] .= z_sol[1:n_q]
     λhist[:,k] .= z_sol[n_q + 1:n_q + n_c]
     shist[:,k] .= z_sol[n_q + n_c + 1:n_q + n_c + n_s]
@@ -197,7 +197,7 @@ end
 mvis = anim_init()
 print("\n Visualization starting in 5 seconds \n")
 sleep(5)
-qhist = qhist[vec(mapslices(col -> any(col .!= 0), qhist, dims = 2)), :]  # delete nonzero rows
+# qhist = qhist[vec(mapslices(col -> any(col .!= 0), qhist, dims = 2)), :]  # delete nonzero rows
 for j in 1:5
     print("\n Visualization starting now, replay #", j, "\n")
     anim(mvis, qhist, h, 0.1)

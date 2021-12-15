@@ -23,7 +23,7 @@ q0 = 30*pi/180;
 q1 = 120*(pi/180)
 q2 = 150*(pi/180)
 q3 = -120*(pi/180)
-a_target = [-q0; -q2]
+a_target = [-35*pi/180; -145*pi/180]
 
 Tf = 1
 h = 0.01
@@ -109,7 +109,7 @@ for kk = 2:(N-1)
     if k <= 3  # enforce no input for first two timesteps
         global F = u_f([0.0; 0.0], q_0)  
     else
-        global F = u_f([0.0; 0.0], qhist[:, k])
+        # global F = u_f([0.0; 0.0], qhist[:, k])
         global F = a_control(a_target, a, a_vel(a, a_prev, h), qhist[:, k])
     end
 

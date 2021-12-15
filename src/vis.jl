@@ -12,7 +12,7 @@ function geom_init()
     return vis
 end
 
-function geom_vis(vis, qhist)
+function geom_vis(vis, qhist, dt, speed=1)
 
     green_material = MeshPhongMaterial(color=pl.RGBA(0, 1, 0, 0.8))
     red_material = MeshPhongMaterial(color=pl.RGBA(1, 0, 0, 0.8))
@@ -50,7 +50,7 @@ function geom_vis(vis, qhist)
         settransform!(vis["cylinder1"], compose(position1,attitude1))
         settransform!(vis["cylinder2"], compose(position2,attitude2))
         settransform!(vis["cylinder3"], compose(position3,attitude3))
-        sleep(0.1)
+        sleep(dt/speed)
     end
 
     return nothing
@@ -68,7 +68,7 @@ function urdf_init()
     return mvis
 end
 
-function urdf_vis(mvis, qhist)
+function urdf_vis(mvis, qhist, dt, speed=1)
 
     for k = 1:N
         q = copy(qhist[:, k])
@@ -89,7 +89,7 @@ function urdf_vis(mvis, qhist)
         q_array = vcat(Qb, pb, [a0, a2, a1, a3])
         # @show [a0, a2, a1, a3]
         set_configuration!(mvis, q_array)
-        sleep(0.1)
+        sleep(dt/speed)
     end
 end
 

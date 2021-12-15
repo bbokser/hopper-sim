@@ -23,7 +23,7 @@ q0 = 30*pi/180;
 q1 = 120*(pi/180)
 q2 = 150*(pi/180)
 q3 = -120*(pi/180)
-a_target = [q0; q2]
+a_target = [-q0; -q2]
 
 Tf = 1
 h = 0.01  # 0.01
@@ -57,7 +57,7 @@ Q3 .= Q3/norm(Q3)
 q_0 = [rb; Qb; r0; Q0; r1; Q1; r2; Q2; r3; Q3]  # initial state
 
 # make gravity zero for first two timesteps
-ghist = repeat([0 0 g], N)'
+ghist = repeat([0 0 0], N)'
 ghist[:, 1] = [0 0 0]
 ghist[:, 2] = [0 0 0]
 
@@ -97,15 +97,16 @@ global k = 0
 for kk = 2:(N-1)
     
     global k = kk
-
+    print("position = ",a_act(qhist[:, k])*180/pi, " target = ", a_target*180/pi, "\n")
     a = a_act(qhist[:, k])
     a_prev = a_act(qhist[:, k-1])
 
     if k <= 3  # enforce no input for first two timesteps
         global F = u_f([0.0; 0.0], q_0)  
     else
-        # global F = u_f([0.0; 1.0e-2], qhist[:, k])
-        global F = a_control(a_target, a, a_vel(a, a_prev, h), qhist[:, k])
+        global F = u_f([0.0; 0.0], qhist[:, k])
+        print(F)
+        # global F = a_control(a_target, a, a_vel(a, a_prev, h), qhist[:, k])
     end
 
     z_guess = [qhist[:,k]; zeros(n_c); ones(n_s)]
@@ -121,7 +122,7 @@ for kk = 2:(N-1)
     print("Simulation ", round(kk/(N-1)*100, digits=3), " % complete \n")
     # flush(stdout)
     
-    if kk/(N-1)*100 > 31; break; end
+    if kk/(N-1)*100 > 24; break; end
     
 end
 
@@ -150,12 +151,13 @@ function angle_y_look()
     for i in 1:(N-1)
         Q0 = qhist[11:14, i]
         Q1 = qhist[18:21, i]
-        an[i] = pi - angle_y(Q0, Q1)
+        an[i] = -angle_y(Q0, Q1)
     end
     return an
 end
 
-plot = true
+plot = true # for now manually change this
+
 thyme = collect(thist)
 if plot == true
     ph = pl.plot(thist,signed_d(), title="signed dist from foot to ground plane")
@@ -180,6 +182,7 @@ if urdf == false
     anim_init = geom_init
     anim = geom_vis
 else
+    print("Warning: urdf visualization mode not as truthful as geometric")
     anim_init = urdf_init
     anim = urdf_vis
 end
@@ -187,8 +190,9 @@ end
 mvis = anim_init()
 print("\n Visualization starting in 5 seconds \n")
 sleep(5)
-for j in 1:4
+qhist = qhist[vec(mapslices(col -> any(col .!= 0), qhist, dims = 2)), :]  # delete nonzero rows
+for j in 1:5
     print("\n Visualization starting now, replay #", j, "\n")
-    anim(mvis, qhist)
+    anim(mvis, qhist, h, 0.1)
 end
 print("\n Visualization ended \n")

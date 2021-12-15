@@ -17,7 +17,6 @@ function con(q)
     rf = r3 + rotate(Q3, lee-l_c3) # position of foot
 
     pb = rb + rotate(Qb, l_cb) # position vector from world frame to *JOINTS* 0 and 2
-    # 
     c_[1:3] = pb - r0 - rotate(Q0, -l_c0)
     c_[4:5] = [0 1 0 0; 0 0 0 1]*L(Qb)'*Q0  # y axis rotation constraint: set x & z = 0
     c_[6:8] = r0 + rotate(Q0,  l0-l_c0) - r1 - rotate(Q1, -l_c1)
@@ -27,7 +26,8 @@ function con(q)
     c_[16:18] = r2 + rotate(Q2, l2 - l_c2) - r3 - rotate(Q3, -l_c3)
     c_[19:20] = [0 1 0 0; 0 0 0 1]*L(Q2)'*Q3 
     c_[21:23] = r1 + rotate(Q1, l1 - l_c1) - r3 - rotate(Q3, lc-l_c3)
-    # Constrain base so that it can only move in z-axis
+    # Prevent base from rotating except in z axis
+    # c_[24:25] = [0 1 0 0; 0 0 1 0]*Qb
     #c_[24] = rb[1]  # constrain base x axis
     #c_[25] = rb[2]  # constrain base y axis
     # Prevent foot-floor interpenetration
@@ -137,11 +137,14 @@ function primal_bounds(n)
     #Enforce simple bound constraints on the decision variables (e.g. positivity) here
     # x_l ≤ [q; λ; s] ≤ x_u
     x_l = -Inf*ones(n)  # 60
+    
     # x_l[n_q+n_c] = 0  # normal force corresponding to signed dist constr
     x_l[n_q+n_c+1] = 0  # slack variable
     
     x_u = Inf*ones(n)
-
+    
+    #x_l[1:2] = zeros(2)  # constrain body movement to z-axis only
+    #x_u[1:2] = zeros(2)  # constrain body movement to z-axis only
     return x_l, x_u
 end
 

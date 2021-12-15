@@ -105,8 +105,11 @@ end
 
 function objective(z)
     s = z[n_q+n_c+1:n_q+n_c+n_s]
-    
-    return sum(s) #Minimize slacks associated with complementarity conditions
+    λj = z[n_q+1:n_q+n_c]
+    α = 1e-3
+    # regularizer (Tikhonov)
+    return α*λj'*λj + sum(s) #Minimize slacks associated with complementarity conditions
+    # return sum(s)
 end
 
 function constraint!(c,z)
@@ -138,8 +141,8 @@ function constraint!(c,z)
     c5 = norm(qn[25:28])^2 - 1
     c6 = norm(qn[32:35])^2 - 1
     c7 = con(qn)
-    # c8 = [0; 0]
-    c8 = J(qn)[1:2, :]*vm + λf.*b/smoothsqrt(b'*b)  # maximum dissipation
+    c8 = [0; 0]
+    # c8 = J(qn)[1:2, :]*vm + λf.*b/smoothsqrt(b'*b)  # maximum dissipation
     # inequality constraints
     c9 = ϕ(qn)  # signed distance
     c10 = s[1] .- n.*ϕ(qn)  # relaxed complementarity (signed dist) 1x1
@@ -182,7 +185,7 @@ function constraint_check(z, n_tol)
     c5 = norm(qn[25:28])^2 - 1
     c6 = norm(qn[32:35])^2 - 1
     c7 = con(qn)
-    c8 = J(qn)[1:2, :]*vm + λf.*b/smoothsqrt(b'*b)  # maximum dissipation
+    c8 = [0.0; 0.0]  # J(qn)[1:2, :]*vm + λf.*b/smoothsqrt(b'*b)  # maximum dissipation
     
     # inequality constraints
     # c9 = constraintfn[n_c]  # signed distance
@@ -204,10 +207,10 @@ function constraint_check(z, n_tol)
         #print("\n", B, "\n")
         print(findall(B .< -ones(size(B)[1])*n_tol))  # 25
         print("\n Sim stopped due to ipopt infeasibility \n")
-    elseif (pi-angle_y(Q0, Q1)) < 18*pi/180  # constrain relative angle between links 0 and 1
+    elseif (-angle_y(Q0, Q1)) < 18*pi/180  # constrain relative angle between links 0 and 1
         e = 1
         print("RoM lower limit surpassed")
-    elseif 166*pi/180 < (pi-angle_y(Q0, Q1))
+    elseif 166*pi/180 < (-angle_y(Q0, Q1))
         e = 1
         print("RoM upper limit surpassed")
     else

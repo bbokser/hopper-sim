@@ -48,7 +48,8 @@ end
 
 function rotate(Q, p)
     # Rotate a position vector p by a quaternion Q
-    return H'L(Q)*R(Q)'*H*p
+    # H'L(Q)*R(Q)'*H*p
+    return H'*R(Q)'*L(Q)*H*p
 end
 
 function anglesolve(Q)
@@ -84,6 +85,20 @@ function a_joint(q)
     a3 = -angle_y(Q2, Q3)
 
     return [a0; a1; a2; a3]
+
+end
+
+function a_act(q)
+    # convert quaternions to relative joint angles b/t links
+    # only actuated joints
+    Qb = q[4:7]
+    Q0 = q[11:14]
+    Q2 = q[25:28]
+    
+    a0 = -angle_y(Qb, Q0)
+    a2 = -angle_y(Qb, Q2)
+
+    return [a0; a2]
 
 end
 

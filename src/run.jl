@@ -23,7 +23,7 @@ q0 = 30*pi/180;
 q1 = 120*(pi/180)
 q2 = 150*(pi/180)
 q3 = -120*(pi/180)
-a_target = [q0; q1; q2; q3]
+a_target = [-q0; -q2]
 
 Tf = 1
 h = 0.01
@@ -57,7 +57,7 @@ Q3 .= Q3/norm(Q3)
 q_0 = [rb; Qb; r0; Q0; r1; Q1; r2; Q2; r3; Q3]  # initial state
 
 # make gravity zero for first two timesteps
-ghist = repeat([0 0 g], N)'
+ghist = repeat([0 0 0], N)'
 ghist[:, 1] = [0 0 0]
 ghist[:, 2] = [0 0 0]
 
@@ -94,27 +94,27 @@ bhist = zeros(n_b,N-1)
 λfhist = zeros(n_b,N-1)
 nhist = zeros(n_n, N-1)
 
-global F = u_f([0 0 0 0 0])
-global F_prev = u_f([0 0 0 0 0])
-
+global F = u_f([0.0; 0.0], q_0)
+global F_prev = u_f([0.0; 0.0], q_0)
+Fhist = zeros(30, N)
 global k = 0
 
 for kk = 2:(N-1)
     
     global k = kk
+    print("position = ",a_act(qhist[:, k])*180/pi, " target = ", a_target*180/pi, "\n")
+    a = a_act(qhist[:, k])
+    a_prev = a_act(qhist[:, k-1])
 
-    a = a_joint(qhist[:, k])
-    a_prev = a_joint(qhist[:, k-1])
-
-    if k == 1 || k == 2  # enforce no input for first two timesteps
-        global F = u_f([0 0 0 0 0])  
+    if k <= 3  # enforce no input for first two timesteps
+        global F = u_f([0.0; 0.0], q_0)  
     else
-        global F = u_f([0 0 0 0 0])*1e-4
-        # global F = a_control(a_target, a, a_vel(a, a_prev, h))
+        global F = u_f([0.0; 0.0], qhist[:, k])
+        global F = a_control(a_target, a, a_vel(a, a_prev, h), qhist[:, k])
     end
 
     z_guess = [qhist[:,k]; zeros(n_c); ones(n_s); zeros(n_b); ones(n_b); zeros(n_n)]
-    z_sol = ipopt_solve(z_guess, nlp_prob, max_iter=1000, print=0);
+    z_sol = ipopt_solve(z_guess, nlp_prob, tol=1.0e-3,c_tol=1.0e-3, max_iter=1000, print=2);
     qhist[:,k+1] .= z_sol[1:n_q]
     λhist[:,k] .= z_sol[n_q + 1:n_q + n_c]
     shist[:,k] .= z_sol[n_q + n_c + 1:n_q + n_c + n_s]
@@ -122,14 +122,14 @@ for kk = 2:(N-1)
     λfhist[:,k] .= z_sol[n_q + n_c + n_s + n_b + 1:n_q + n_c + n_s + n_b + n_λf]
     nhist[:,k] .= z_sol[n_q + n_c + n_s + n_b + n_λf + 1:end]
 
-    global F_prev = F
-
-    e = constraint_check(z_sol, 1e-6)  # print("\n", e, "\n")
+    global F_prev = copy(F)
+    Fhist[:, k] = copy(F)
+    # e = constraint_check(z_sol, 1.0e-3)  # print("\n", e, "\n")
     # f e == true; break; end
     print("Simulation ", round(kk/(N-1)*100, digits=3), " % complete \n")
     # flush(stdout)
     
-    if kk/(N-1)*100 > 32; break; end
+    # if kk/(N-1)*100 > 32; break; end
     
 end
 
@@ -158,34 +158,38 @@ function angle_y_look()
     for i in 1:(N-1)
         Q0 = qhist[11:14, i]
         Q1 = qhist[18:21, i]
-        an[i] = angle_y(Q0, Q1)
+        an[i] = -angle_y(Q0, Q1)
     end
     return an
 end
 
-plot = false
+plot = true # for now manually change this
 
+thyme = collect(thist)
 if plot == true
     ph = pl.plot(thist,signed_d(), title="signed dist from foot to ground plane")
     pbz = pl.plot(thist,qhist[3,:], title="height of body")
-    plam = pl.plot(λhist[n_c,:],title="contact force")
-    # pslack = pl.plot(shist,title="slackvar")
+    plam = pl.plot(λhist[n_c,:],title="contact force")  # ylims = (0,20))
+    pslack = pl.plot(thyme[1:N-1], shist',title="slackvar")
     panbt = pl.plot(thist, angle_y_look().*180/pi,title="angle_y b/t 0 and 1")
-    pb = pl.plot(thist[:, 1:end-1], bhist',title="angle_y b/t 0 and 1")
+    pF0 = pl.plot(thist, Fhist[11, :],title="torque acting on link0")
+    pF1 = pl.plot(thist, Fhist[23, :],title="torque acting on link2")
     pl.display(ph)
     pl.display(pbz)
     pl.display(plam)
-    # pl.display(pslack)
+    pl.display(pslack)
     pl.display(panbt)
-    pl.display(pb)
+    pl.display(pF0)
+    pl.display(pF1)
 end
 
-urdf = true  # for now manually change this
+urdf = false  # for now manually change this
 
 if urdf == false
     anim_init = geom_init
     anim = geom_vis
 else
+    print("Warning: urdf visualization mode not as truthful as geometric")
     anim_init = urdf_init
     anim = urdf_vis
 end
@@ -193,8 +197,9 @@ end
 mvis = anim_init()
 print("\n Visualization starting in 5 seconds \n")
 sleep(5)
+qhist = qhist[vec(mapslices(col -> any(col .!= 0), qhist, dims = 2)), :]  # delete nonzero rows
 for j in 1:5
     print("\n Visualization starting now, replay #", j, "\n")
-    anim(mvis, qhist)
+    anim(mvis, qhist, h, 0.1)
 end
 print("\n Visualization ended \n")

@@ -57,7 +57,7 @@ Q3 .= Q3/norm(Q3)
 q_0 = [rb; Qb; r0; Q0; r1; Q1; r2; Q2; r3; Q3]  # initial state
 
 # make gravity zero for first two timesteps
-ghist = repeat([0 0 0], N)'
+ghist = repeat([0 0 g], N)'
 ghist[:, 1] = [0 0 0]
 ghist[:, 2] = [0 0 0]
 
@@ -129,7 +129,7 @@ for kk = 2:(N-1)
     print("Simulation ", round(kk/(N-1)*100, digits=3), " % complete \n")
     # flush(stdout)
     
-    # if kk/(N-1)*100 > 40; break; end
+    if kk/(N-1)*100 > 40; break; end
     
 end
 

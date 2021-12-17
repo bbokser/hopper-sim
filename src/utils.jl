@@ -111,3 +111,8 @@ function smoothsqrt(x)
     ϵ = 1e-7
     return sqrt(x.+ϵ*ϵ) .- ϵ
 end
+
+function qinv(Q)
+    # quaternion inverse = quaternion conjugate
+    return reshape(Q, 1, 4)*Diagonal(T)/(norm(Q)^2)
+end

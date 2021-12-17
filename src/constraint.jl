@@ -94,11 +94,27 @@ function DEL(q_1,q_2,q_3,λ,F1,F2,grav,b,n)
             del(m2, I2, r2_1, r2_2, r2_3, Q2_1, Q2_2, Q2_3, grav);
             del(m3, I3, r3_1, r3_2, r3_3, Q3_1, Q3_2, Q3_3, grav)] 
     
-    Fb = zeros(eltype(b), 30)
-    Fb[25:26] = b  # should be last link's x and y translation terms
+    Bk = B(q_2, b)
 
     return del1 + (h/2.0)*F1 + (h/2.0)*F2 + 
-        reshape(h*Dc(q_2)'*λ, 30) + reshape(h*Dϕ(q_2)'*n, 30) + h*Fb
+        reshape(h*Dc(q_2)'*λ, 30) + reshape(h*Dϕ(q_2)'*n, 30) + h*Bk
+end
+
+function B(q, b)
+    # friction wrench calculation
+    
+    Bk = zeros(eltype(b), 30)
+
+    Q3 = q[32:35]
+    
+    fw3 = [b[1]; b[2]; 0]
+    lf = rotate(Q3, -(lee - l_c3)) - 0.025
+    τw3  = cross(lf, fw3)  # TODO: foot radius
+    τb3 = rotate(qinv(Q3), τw3)
+    Bk[1:end] = [zeros(24); 
+                 fw3;
+                 τb3]
+    return Bk
 end
 
 #Objective and constraint functions for IPOPT

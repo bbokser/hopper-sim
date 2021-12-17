@@ -90,19 +90,19 @@ function kinematics(q)
     d = 0
     x0a = l_0 * cos(q0)
     z0a = l_0 * sin(q0)
-    rho = smoothsqrt((x0a + d)^2 + z0a^2)
+    rho = sqrt((x0a + d)^2 + z0a^2)
     x1a = l_2 * cos(q2)
     z1a = l_2 * sin(q2)
-    h = smoothsqrt((x0a - x1a)^2 + (z0a - z1a)^2)
-    mu = acos((l_3^2 + h^2 - l_1^2) / (2 * l_3 * h + 1e-8))
-    eta = acos((h^2 + l_2^2 - rho^2) / (2 * h * l_2 + 1e-8))
+    h = sqrt((x0a - x1a)^2 + (z0a - z1a)^2)
+    mu = acos((l_3^2 + h^2 - l_1^2) / (2 * l_3 * h + 1e-7))
+    eta = acos((h^2 + l_2^2 - rho^2) / (2 * h * l_2 + 1e-7))
     alpha = pi - (eta + mu) + q2
     xa = l_2 * cos(q2) + (l_3 + l_4) * cos(alpha) - d + l_5 * cos(alpha - pi / 2)
     ya = 0
     za = l_2 * sin(q2) + (l_3 + l_4) * sin(alpha) + l_5 * cos(alpha - pi / 2)
     k_base = [xa; ya; za]
     
-    return L(Qb)*R(Qb)'*H*k_base
+    return rotate(Qb, k_base)
 end
 
 # End effector Jacobian

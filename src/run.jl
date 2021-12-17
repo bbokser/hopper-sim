@@ -23,7 +23,7 @@ q0 = 30*pi/180;
 q1 = 120*(pi/180)
 q2 = 150*(pi/180)
 q3 = -120*(pi/180)
-a_target = [-35*pi/180; -145*pi/180]
+a_target = [-40*pi/180; -140*pi/180]
 
 Tf = 1
 h = 0.01
@@ -129,7 +129,7 @@ for kk = 2:(N-1)
     print("Simulation ", round(kk/(N-1)*100, digits=3), " % complete \n")
     # flush(stdout)
     
-    if kk/(N-1)*100 > 40; break; end
+    # if kk/(N-1)*100 > 40; break; end
     
 end
 
@@ -154,24 +154,27 @@ function angle_look()
 end
 
 function angle_y_look()
-    an = zeros(N)
+    an = zeros(N-1)
     for i in 1:(N-1)
+        Qb = qhist[4:7, i]
         Q0 = qhist[11:14, i]
         Q1 = qhist[18:21, i]
-        an[i] = -angle_y(Q0, Q1)
+        an[i] = -angle_y(Qb, Q0)
     end
     return an
 end
 
-plot = false # for now manually change this
-
+plot = true # for now manually change this
+fnt = pl.font("Times Roman")
 thyme = collect(thist)
 if plot == true
     ph = pl.plot(thist,signed_d(), title="signed dist from foot to ground plane")
     pbz = pl.plot(thist,qhist[3,:], title="height of body")
     plam = pl.plot(λhist[n_c,:],title="contact force")  # ylims = (0,20))
     pslack = pl.plot(thyme[1:N-1], shist',title="slackvar")
-    panbt = pl.plot(thist, angle_y_look().*180/pi,title="angle_y b/t 0 and 1")
+    panbt = pl.plot(thyme[1:N-1], -angle_y_look().*180/pi,title="Angle Between Q0 and Q1", 
+        xlabel="Time (s)", ylabel="Angle (Degrees)", ylim=(0, 60), titlefont=fnt, guidefont=fnt,
+        tickfont=fnt, legendfont=fnt, size=(1200,800), fmt = :png, thickness_scaling=2)
     pF0 = pl.plot(thist, Fhist[11, :],title="torque acting on link0")
     pF1 = pl.plot(thist, Fhist[23, :],title="torque acting on link2")
     pl.display(ph)
@@ -179,6 +182,7 @@ if plot == true
     pl.display(plam)
     pl.display(pslack)
     pl.display(panbt)
+    pl.savefig("panbt")
     pl.display(pF0)
     pl.display(pF1)
 end

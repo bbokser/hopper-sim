@@ -140,8 +140,8 @@ function constraint!(c,z)
     c5 = norm(qn[25:28])^2 - 1
     c6 = norm(qn[32:35])^2 - 1
     c7 = con(qn)
-    # c8 = Jac(qn)[1:2, :]*vm + λf.*b/(smoothsqrt(b'*b)+1e-8)  # maximum dissipation
-    c8  = [0.; 0.]
+    c8 = Jac(qn)[1:2, :]*vm + λf.*b/(smoothsqrt(b'*b)+1e-7)  # maximum dissipation
+    # c8  = [0.; 0.]
     # inequality constraints
     c9 = ϕ(qn)  # signed distance
     c10 = s[1] .- n.*ϕ(qn)  # relaxed complementarity (signed dist) 1x1

@@ -108,6 +108,6 @@ function a_vel(a, a_prev, dt)
 end
 
 function smoothsqrt(x)
-    ϵ = 1e-6
+    ϵ = 1e-7
     return sqrt(x.+ϵ*ϵ) .- ϵ
 end

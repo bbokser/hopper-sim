@@ -18,11 +18,11 @@ function u_f(u, q)
     f2 = f_applied(τ2, l_c2)
 
     #Corresponding wrench "F" for each link
-    Fk = [(L(Qb)*R(Qb)'*H*fb)[2:4]; τb;        # body  
-          (L(Q0)*R(Q0)'*H*f0)[2:4]; τ0;        # link0
-          zeros(3);                 zeros(3);  # link1
-          (L(Q2)*R(Q2)'*H*f2)[2:4]; τ2;        # link2
-          zeros(3);                 zeros(3)]  # link3
+    Fk = [rotate(Qb, fb); τb;        # body  
+          rotate(Q0, f0); τ0;        # link0
+          zeros(3);       zeros(3);  # link1
+          rotate(Q2, f2); τ2;        # link2
+          zeros(3);       zeros(3)]  # link3
 
     return Fk
 end

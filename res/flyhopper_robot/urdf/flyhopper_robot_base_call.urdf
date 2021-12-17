@@ -4,19 +4,6 @@
      For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
 <robot
   name="flyhopper_robot">
-  <joint name="control" type="floating">
-    <parent link="base_link"/>
-    <child link="world"/>
-    <origin xyz="0.0 0.0 0.0"/>
-  </joint>
-  <link name="world">
-    <inertial>
-      <mass value="0.01"/>
-      <origin xyz="0 0 0"/>
-      <inertia ixx="1" ixy="0.0" ixz="0.0" iyy="1" iyz="0.0" izz="1"/>
-    </inertial>
-  </link>
-
   <link
     name="base_link">
     <inertial>
@@ -39,7 +26,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://../res/flyhopper_robot/meshes/base_link.STL" />
+          filename="package://res/flyhopper_robot/meshes/base_link.STL" />
       </geometry>
       <material
         name="">
@@ -53,7 +40,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://../res/flyhopper_robot/meshes/base_link.STL" />
+          filename="package://res/flyhopper_robot/meshes/base_link.STL" />
       </geometry>
     </collision>
   </link>
@@ -79,7 +66,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://../res/flyhopper_robot/meshes/Link 0.STL" />
+          filename="package://res/flyhopper_robot/meshes/Link 0.STL" />
       </geometry>
       <material
         name="">
@@ -93,7 +80,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://../res/flyhopper_robot/meshes/Link 0.STL" />
+          filename="package://res/flyhopper_robot/meshes/Link 0.STL" />
       </geometry>
     </collision>
   </link>
@@ -137,7 +124,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://../res/flyhopper_robot/meshes/Link 1.STL" />
+          filename="package://res/flyhopper_robot/meshes/Link 1.STL" />
       </geometry>
       <material
         name="">
@@ -151,7 +138,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://../res/flyhopper_robot/meshes/Link 1.STL" />
+          filename="package://res/flyhopper_robot/meshes/Link 1.STL" />
       </geometry>
     </collision>
   </link>
@@ -195,7 +182,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://../res/flyhopper_robot/meshes/Link 2.STL" />
+          filename="package://res/flyhopper_robot/meshes/Link 2.STL" />
       </geometry>
       <material
         name="">
@@ -209,7 +196,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://../res/flyhopper_robot/meshes/Link 2.STL" />
+          filename="package://res/flyhopper_robot/meshes/Link 2.STL" />
       </geometry>
     </collision>
   </link>
@@ -253,7 +240,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://../res/flyhopper_robot/meshes/Link 3.STL" />
+          filename="package://res/flyhopper_robot/meshes/Link 3.STL" />
       </geometry>
       <material
         name="">
@@ -267,7 +254,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://../res/flyhopper_robot/meshes/Link 3.STL" />
+          filename="package://res/flyhopper_robot/meshes/Link 3.STL" />
       </geometry>
     </collision>
   </link>

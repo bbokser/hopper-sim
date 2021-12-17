@@ -5,4 +5,4 @@ The main branch is set to zero-gravity by default to demonstrate PD control of t
 
 Use run.jl to run the code.
 
-![til](./media/PD.gif)
+![til](./PD.gif)

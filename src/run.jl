@@ -57,7 +57,7 @@ Q3 .= Q3/norm(Q3)
 q_0 = [rb; Qb; r0; Q0; r1; Q1; r2; Q2; r3; Q3]  # initial state
 
 # make gravity zero for first two timesteps
-ghist = repeat([0 0 g], N)'
+ghist = repeat([0 0 0], N)'
 ghist[:, 1] = [0 0 0]
 ghist[:, 2] = [0 0 0]
 
@@ -164,7 +164,7 @@ function angle_y_look()
     return an
 end
 
-plot = true # for now manually change this
+plot = false # for now manually change this
 fnt = pl.font("Times Roman")
 thyme = collect(thist)
 if plot == true

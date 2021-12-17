@@ -164,7 +164,7 @@ function angle_y_look()
     return an
 end
 
-plot = false # for now manually change this
+plot = true # for now manually change this
 fnt = pl.font("Times Roman")
 thyme = collect(thist)
 if plot == true
@@ -182,7 +182,7 @@ if plot == true
     pl.display(plam)
     pl.display(pslack)
     pl.display(panbt)
-    pl.savefig("panbt")
+    # pl.savefig("panbt")
     pl.display(pF0)
     pl.display(pF1)
 end
